@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>데이터 관리 프로그램</title>
+    <style>
+        body { font-family: sans-serif; margin: 2em; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .form-section, .search-section, .data-section { margin-bottom: 2em; }
+        .flash { padding: 1em; margin-bottom: 1em; border-radius: 5px; }
+        .flash.success { background-color: #d4edda; color: #155724; }
+        .flash.error { background-color: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <h1>데이터 관리 프로그램</h1>
+
+    <!-- 메시지 표시 -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <!-- 입력 폼 -->
+    <div class="form-section">
+        <h2>새 데이터 추가</h2>
+        <form action="{{ url_for('add_user') }}" method="post" enctype="multipart/form-data">
+            <p>이름: <input type="text" name="name" required></p>
+            <p>연락처: <input type="text" name="phone"></p>
+            <p>이메일: <input type="email" name="email"></p>
+            <p>메모: <input type="text" name="memo"></p>
+            <p>첨부파일: <input type="file" name="attachment"></p>
+            <p><input type="submit" value="저장"></p>
+        </form>
+    </div>
+
+    <!-- 검색 폼 -->
+    <div class="search-section">
+        <h2>데이터 검색</h2>
+        <form action="{{ url_for('index') }}" method="get">
+            <input type="text" name="keyword" placeholder="이름, 연락처 등으로 검색" value="{{ keyword or '' }}">
+            <input type="submit" value="검색">
+            <a href="{{ url_for('index') }}">전체 보기</a>
+        </form>
+    </div>
+
+    <!-- 데이터 목록 -->
+    <div class="data-section">
+        <h2>저장된 데이터 목록</h2>
+        <table>
+            <tr>
+                <th>ID</th>
+                <th>이름</th>
+                <th>연락처</th>
+                <th>이메일</th>
+                <th>메모</th>
+                <th>첨부파일</th>
+                <th>관리</th>
+            </tr>
+            {% for user in users %}
+            <tr>
+                <td>{{ user.id }}</td>
+                <td>{{ user.name }}</td>
+                <td>{{ user.phone }}</td>
+                <td>{{ user.email }}</td>
+                <td>{{ user.memo }}</td>
+                <td>
+                    {% if user.attachment %}
+                    <a href="{{ url_for('uploaded_file', filename=user.attachment) }}" target="_blank">{{ user.attachment }}</a>
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="{{ url_for('edit_form', id=user.id) }}">수정</a> |
+                    <a href="{{ url_for('delete_user', id=user.id) }}" onclick="return confirm('정말 삭제하시겠습니까?');">삭제</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</body>
+</html>

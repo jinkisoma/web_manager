@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>데이터 수정</title>
+    <style>
+        body { font-family: sans-serif; margin: 2em; }
+    </style>
+</head>
+<body>
+    <h1>데이터 수정</h1>
+    <form action="{{ url_for('update_user', id=user.id) }}" method="post">
+        <p>이름: <input type="text" name="name" value="{{ user.name }}" required></p>
+        <p>연락처: <input type="text" name="phone" value="{{ user.phone }}"></p>
+        <p>이메일: <input type="email" name="email" value="{{ user.email }}"></p>
+        <p>메모: <input type="text" name="memo" value="{{ user.memo }}"></p>
+        <p>첨부파일: {{ user.attachment or '없음' }} (파일 변경은 지원되지 않습니다)</p>
+        <p>
+            <input type="submit" value="수정 완료">
+            <a href="{{ url_for('index') }}">취소</a>
+        </p>
+    </form>
+</body>
+</html>
