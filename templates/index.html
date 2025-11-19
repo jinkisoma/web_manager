@@ -4,42 +4,65 @@
     <meta charset="UTF-8">
     <title>데이터 관리 프로그램</title>
     <style>
-        body { font-family: sans-serif; margin: 2em; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        body { font-family: sans-serif; margin: 2em; background-color: #f9f9f9; }
+        h1, h2 { color: #333; }
+        table { width: 100%; border-collapse: collapse; background-color: white; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
         th { background-color: #f2f2f2; }
-        .form-section, .search-section, .data-section { margin-bottom: 2em; }
+        .form-section, .search-section, .data-section { 
+            margin-bottom: 2em; 
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
         .flash { padding: 1em; margin-bottom: 1em; border-radius: 5px; }
         .flash.success { background-color: #d4edda; color: #155724; }
         .flash.error { background-color: #f8d7da; color: #721c24; }
-/* 2. CSS 디자인 추가 (기존 <style> 태그 안에 추가) */
-.form-group {
-    margin-bottom: 15px; /* 각 입력 항목 사이의 간격 */
-}
-.form-label {
-    display: block; /* 레이블이 한 줄을 모두 차지하도록 */
-    margin-bottom: 5px;
-    font-weight: bold; /* 글씨 굵게 */
-}
-.form-input {
-    width: 98%; /* 입력창 너비 */
-    padding: 10px; /* 안쪽 여백 */
-    border: 1px solid #ccc;
-    border-radius: 4px; /* 모서리 둥글게 */
-}
-.submit-btn {
-    background-color: #007bff; /* 버튼 배경색 */
-    color: white; /* 버튼 글자색 */
-    padding: 10px 20px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer; /* 마우스를 올리면 손가락 모양으로 */
-    font-size: 16px;
-}
-.submit-btn:hover {
-    background-color: #0056b3; /* 마우스 올렸을 때 색 변경 */
-}
 
+        /* 폼 디자인 개선 CSS */
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-input {
+            width: 98%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .submit-btn {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .submit-btn:hover {
+            background-color: #0056b3;
+        }
+
+        /* 엑셀 다운로드 버튼 CSS */
+        .excel-btn {
+            display: inline-block;
+            background-color: #28a745;
+            color: white;
+            padding: 5px 10px;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 14px;
+            vertical-align: middle;
+            margin-left: 10px;
+        }
+        .excel-btn:hover {
+            background-color: #218838;
+        }
     </style>
 </head>
 <body>
@@ -54,44 +77,46 @@
       {% endif %}
     {% endwith %}
 
-    <!-- 입력 폼 -->
-  <!-- 1. HTML 구조 변경 -->
-<!-- 입력 폼 -->
-<div class="form-section">
-    <h2>새 데이터 추가</h2>
-    <form action="{{ url_for('add_user') }}" method="post" enctype="multipart/form-data">
-        <div class="form-group">
-            <label for="name" class="form-label">이름</label>
-            <input type="text" id="name" name="name" class="form-input" required>
-        </div>
-        <div class="form-group">
-            <label for="phone" class="form-label">연락처</label>
-            <input type="text" id="phone" name="phone" class="form-input">
-        </div>
-        <div class="form-group">
-            <label for="email" class="form-label">이메일</label>
-            <input type="email" id="email" name="email" class="form-input">
-        </div>
-        <div class="form-group">
-            <label for="memo" class="form-label">메모</label>
-            <input type="text" id="memo" name="memo" class="form-input">
-        </div>
-        <div class="form-group">
-            <label for="attachment" class="form-label">첨부파일</label>
-            <input type="file" id="attachment" name="attachment">
-        </div>
-        <input type="submit" value="저장하기" class="submit-btn">
-    </form>
-</div>
+    <!-- 입력 폼 (디자인 개선 버전) -->
+    <div class="form-section">
+        <h2>새 데이터 추가</h2>
+        <form action="{{ url_for('add_user') }}" method="post" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="name" class="form-label">이름</label>
+                <input type="text" id="name" name="name" class="form-input" required>
+            </div>
+            <div class="form-group">
+                <label for="phone" class="form-label">연락처</label>
+                <input type="text" id="phone" name="phone" class="form-input">
+            </div>
+            <div class="form-group">
+                <label for="email" class="form-label">이메일</label>
+                <input type="email" id="email" name="email" class="form-input">
+            </div>
+            <div class="form-group">
+                <label for="memo" class="form-label">메모</label>
+                <input type="text" id="memo" name="memo" class="form-input">
+            </div>
+            <div class="form-group">
+                <label for="attachment" class="form-label">첨부파일</label>
+                <input type="file" id="attachment" name="attachment">
+            </div>
+            <input type="submit" value="저장하기" class="submit-btn">
+        </form>
+    </div>
 
-
-    <!-- 검색 폼 -->
+    <!-- 검색 폼 (기능 추가 버전) -->
     <div class="search-section">
-        <h2>데이터/data 검색</h2>
+        <h2>데이터 검색</h2>
         <form action="{{ url_for('index') }}" method="get">
-            <input type="text" name="keyword" placeholder="이름, 연락처 등으로 검색" value="{{ keyword or '' }}">
-            <input type="submit" value="검색">
-            <a href="{{ url_for('index') }}">전체 보기</a>
+            <input type="text" name="keyword" placeholder="이름, 연락처 등으로 검색" value="{{ keyword or '' }}" class="form-input" style="width: 50%; display: inline-block;">
+            <input type="submit" value="검색" class="submit-btn" style="padding: 10px 15px; font-size: 14px;">
+            
+            <!-- '전체 보기' 버튼의 링크 수정 -->
+            <a href="{{ url_for('index', show_all='true') }}" class="submit-btn" style="background-color: #6c757d; padding: 10px 15px; font-size: 14px; text-decoration: none;">전체 보기</a>
+            
+            <!-- '엑셀 다운로드' 버튼 추가 -->
+            <a href="{{ url_for('download_excel', keyword=keyword) }}" class="excel-btn" style="padding: 10px 15px; font-size: 14px;">엑셀 다운로드</a>
         </form>
     </div>
 
@@ -99,34 +124,45 @@
     <div class="data-section">
         <h2>저장된 데이터 목록</h2>
         <table>
-            <tr>
-                <th>ID</th>
-                <th>이름</th>
-                <th>연락처</th>
-                <th>이메일</th>
-                <th>메모</th>
-                <th>첨부파일</th>
-                <th>관리</th>
-            </tr>
-            {% for user in users %}
-            <tr>
-                <td>{{ user.id }}</td>
-                <td>{{ user.name }}</td>
-                <td>{{ user.phone }}</td>
-                <td>{{ user.email }}</td>
-                <td>{{ user.memo }}</td>
-                <td>
-                    {% if user.attachment %}
-                    <a href="{{ url_for('uploaded_file', filename=user.attachment) }}" target="_blank">{{ user.attachment }}</a>
-                    {% endif %}
-                </td>
-                <td>
-                    <a href="{{ url_for('edit_form', id=user.id) }}">수정</a> |
-                    <a href="{{ url_for('delete_user', id=user.id) }}" onclick="return confirm('정말 삭제하시겠습니까?');">삭제</a>
-                </td>
-            </tr>
-            {% endfor %}
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>이름</th>
+                    <th>연락처</th>
+                    <th>이메일</th>
+                    <th>메모</th>
+                    <th>첨부파일</th>
+                    <th>관리</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>{{ user.id }}</td>
+                    <td>{{ user.name }}</td>
+                    <td>{{ user.phone }}</td>
+                    <td>{{ user.email }}</td>
+                    <td>{{ user.memo }}</td>
+                    <td>
+                        {% if user.attachment %}
+                        <a href="{{ url_for('uploaded_file', filename=user.attachment) }}" target="_blank">{{ user.attachment }}</a>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{{ url_for('edit_form', id=user.id) }}">수정</a> |
+                        <a href="{{ url_for('delete_user', id=user.id) }}" onclick="return confirm('정말 삭제하시겠습니까?');">삭제</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
         </table>
+        <!-- 데이터가 없을 때 메시지 표시 -->
+        {% if not users and (request.args.get('show_all') or request.args.get('keyword')) %}
+            <p style="text-align: center; padding: 20px;">표시할 데이터가 없습니다.</p>
+        {% elif not users %}
+            <p style="text-align: center; padding: 20px;">'전체 보기'를 누르거나 검색어를 입력하여 데이터를 조회하세요.</p>
+        {% endif %}
     </div>
 </body>
 </html>
+
