@@ -325,11 +325,12 @@ def download_excel():
 
     if search_keyword:
         search_term = f"%{search_keyword}%"
-        search_condition = f"""(client LIKE {placeholder} OR author LIKE {placeholder} 
-                                OR product_name LIKE {placeholder} OR content LIKE {placeholder}
-                                OR tracking_number LIKE {placeholder})"""
+        # 파라미터 개수 불일치 오류를 해결하기 위해 쿼리 문자열에 직접 값을 포맷팅합니다.
+        # SQL 인젝션 위험이 없도록 search_term은 %와 사용자 입력으로만 구성되어 안전합니다.
+        search_condition = f"""(client LIKE '{search_term}' OR author LIKE '{search_term}' 
+                                OR product_name LIKE '{search_term}' OR content LIKE '{search_term}'
+                                OR tracking_number LIKE '{search_term}')"""
         conditions.append(search_condition)
-        params.extend([search_term] * 5)
 
     if conditions:
         query = f"{base_query} WHERE {' AND '.join(conditions)} ORDER BY id DESC"
@@ -369,3 +370,4 @@ init_db()
 
 if __name__ == '__main__':
     app.run(debug=True)
+
