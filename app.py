@@ -129,7 +129,10 @@ def index():
 
     if conditions:
         query = f"{base_query} WHERE {' AND '.join(conditions)} ORDER BY id DESC"
-        cursor.execute(query, tuple(params))
+        if params:
+            cursor.execute(query, tuple(params))
+        else:
+            cursor.execute(query)
     else:
         # 조회 조건이 없을 경우, 모든 데이터를 조회하도록 수정
         cursor.execute(f"{base_query} ORDER BY id DESC")
@@ -330,7 +333,10 @@ def download_excel():
 
     if conditions:
         query = f"{base_query} WHERE {' AND '.join(conditions)} ORDER BY id DESC"
-        cursor.execute(query, tuple(params))
+        if params:
+            cursor.execute(query, tuple(params))
+        else:
+            cursor.execute(query)
     else:
         # 조회 조건이 없을 경우, 모든 데이터를 조회하도록 수정
         query = f"{base_query} ORDER BY id DESC"
