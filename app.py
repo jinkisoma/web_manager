@@ -55,12 +55,13 @@ def index():
     
     rows = []
     
+    # 검색어가 있거나 '전체보기'가 요청된 경우에만 DB 조회
     if search_keyword or show_all == 'true':
         conn = get_db_connection()
         cursor = conn.cursor()
         placeholder = '%s' if DATABASE_URL else '?'
 
-        if search_keyword: # 검색어가 있는 경우
+        if search_keyword:
             search_term = f"%{search_keyword}%"
             query = f"SELECT * FROM user_data WHERE name LIKE {placeholder} OR phone LIKE {placeholder} OR email LIKE {placeholder} OR memo LIKE {placeholder} ORDER BY id DESC"
             cursor.execute(query, (search_term, search_term, search_term, search_term))
@@ -94,11 +95,10 @@ def download_excel():
     conn.close()
 
     # pandas DataFrame으로 데이터 변환
-    # fetchall() 결과가 DB 드라이버에 따라 튜플 리스트일 수 있으므로 컬럼명 지정
-    df = pd.DataFrame(rows, columns=['id', 'name', 'phone', 'email', 'memo'])
-    df.columns = ['ID', '이름', '연락처', '이메일', '메모'] # 엑셀에 표시될 컬럼명 변경
+    # fetchall() 결과가 DB 드라이버에 따라 튜플 리스트일 수 있으므로 컬럼명 지정 (PostgreSQL은 튜플, SQLite는 Row 객체)
+    df = pd.DataFrame(rows, columns=['id', 'name', 'phone', 'email', 'memo']) # DB에서 가져온 컬럼명
+    df.columns = ['ID', '이름', '연락처', '이메일', '메모'] # 엑셀 헤더에 표시될 한글 컬럼명
 
-    # 메모리 버퍼를 사용하여 엑셀 파일 생성
     output = io.BytesIO()
     writer = pd.ExcelWriter(output, engine='openpyxl')
     df.to_excel(writer, index=False, sheet_name='데이터')
@@ -202,4 +202,3 @@ def uploaded_file(filename):
 if __name__ == '__main__':
     init_db() # 로컬에서 실행 시 DB 초기화
     app.run(debug=True) # 개발용 서버 실행
-
