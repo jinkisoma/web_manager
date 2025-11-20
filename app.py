@@ -59,7 +59,6 @@ HEADER_MAP = {
     'client': '거래처',
     'author': '작성자',
     'product_code': '업체상품코드',
-    'tracking_number': '송장번호',
     'work_type': '작업 구분',
     'content': '내용',
     'product_name': '상품명',
@@ -67,7 +66,8 @@ HEADER_MAP = {
     'box_quantity': '박스수량',
     'unit_price': '금액(단가)',
     'total_amount': '합계',
-    'remarks': '비고',
+    'remarks': '주문자',
+    'tracking_number': '송장번호',
     'confirmed': '확정여부'
 }
 
@@ -246,7 +246,7 @@ def add_user():
     quantity_str = request.form.get('quantity')
     box_quantity_str = request.form.get('box_quantity')
     unit_price_str = request.form.get('unit_price')
-    remarks = request.form['remarks']
+    remarks = request.form.get('orderer_select') if request.form.get('orderer_select') != 'direct' else request.form.get('orderer_direct', '')
 
     if not work_date or not client or not author:
         flash('작업일자, 거래처, 작성자는 필수 항목입니다.', 'error')
@@ -332,7 +332,7 @@ def update_user(id):
     quantity_str = request.form.get('quantity')
     box_quantity_str = request.form.get('box_quantity')
     unit_price_str = request.form.get('unit_price')
-    remarks = request.form['remarks']
+    remarks = request.form.get('orderer_select') if request.form.get('orderer_select') != 'direct' else request.form.get('orderer_direct', '')
 
     # [수정] 소유권 및 확정 여부 확인
     current_author = request.form.get('current_author', '')

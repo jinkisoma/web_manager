@@ -62,20 +62,17 @@
                     <input type="text" id="author" name="author" class="form-input" value="{{ user.author or '' }}" required {% if is_readonly %}disabled{% endif %}>
                 </div>
                 <div class="form-group">
+                    <label for="orderer_select" class="form-label">주문자</label>
+                    <select id="orderer_select" name="orderer_select" class="form-select" {% if is_readonly %}disabled{% endif %}></select>
+                    <input type="text" id="orderer_direct" name="orderer_direct" class="form-input hidden" placeholder="주문자 직접 입력" {% if is_readonly %}disabled{% endif %}>
+                </div>
+                <div class="form-group">
                     <label for="product_code" class="form-label">업체상품코드</label>
                     <input type="text" id="product_code" name="product_code" class="form-input" value="{{ user.product_code or '' }}" {% if is_readonly %}disabled{% endif %}>
                 </div>
                 <div class="form-group">
-                    <label for="tracking_number" class="form-label">송장번호</label>
-                    <input type="text" id="tracking_number" name="tracking_number" class="form-input" value="{{ user.tracking_number or '' }}" {% if is_readonly %}disabled{% endif %}>
-                </div>
-                <div class="form-group">
                     <label for="product_name" class="form-label">상품명</label>
                     <input type="text" id="product_name" name="product_name" class="form-input" value="{{ user.product_name or '' }}" {% if is_readonly %}disabled{% endif %}>
-                </div>
-                <div class="form-group">
-                    <label for="quantity" class="form-label">작업수량</label>
-                    <input type="number" id="quantity" name="quantity" class="form-input" value="{{ user.quantity or '' }}" {% if is_readonly %}disabled{% endif %}>
                 </div>
                 <div class="form-group">
                     <label for="box_quantity" class="form-label">박스수량</label>
@@ -90,34 +87,44 @@
                     <input type="text" id="total_amount" name="total_amount" class="form-input" value="{{ user.total_amount | number_format }}" readonly style="text-align: right;" {% if is_readonly %}disabled{% endif %}>
                 </div>
                 <div class="form-group">
-                    <label for="remarks" class="form-label">비고</label>
-                    <input type="text" id="remarks" name="remarks" class="form-input" value="{{ user.remarks or '' }}" {% if is_readonly %}disabled{% endif %}>
+                    <label for="quantity" class="form-label">작업수량</label>
+                    <input type="number" id="quantity" name="quantity" class="form-input" value="{{ user.quantity or '' }}" {% if is_readonly %}disabled{% endif %}>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">현재 첨부파일</label>
-                    <div style="padding: 8px; border: 1px solid #eee; border-radius: 4px; background-color: #f8f9fa;">
-                        {% if user.attachment %}
-                            <a href="{{ url_for('uploaded_file', filename=user.attachment) }}" target="_blank">{{ user.attachment }}</a>
-                            {% if not is_readonly %}
-                            <div style="margin-top: 5px;">
-                                <input type="checkbox" id="delete_attachment" name="delete_attachment" value="true">
-                                <label for="delete_attachment">기존 파일 삭제</label>
-                            </div>
-                            {% endif %}
-                        {% else %}
-                            없음
-                        {% endif %}
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label for="attachment" class="form-label">첨부파일 변경</label>
-                    <input type="file" id="attachment" name="attachment" class="form-input" {% if is_readonly %}disabled{% endif %}>
-                    <input type="hidden" name="existing_attachment" value="{{ user.attachment or '' }}">
+                    <label for="tracking_number" class="form-label">송장번호</label>
+                    <input type="text" id="tracking_number" name="tracking_number" class="form-input" value="{{ user.tracking_number or '' }}" {% if is_readonly %}disabled{% endif %}>
                 </div>
             </div>
-            <div class="form-group" style="margin-top: 15px;">
-                <label for="content" class="form-label">내용</label>
-                <textarea id="content" name="content" class="form-textarea" {% if is_readonly %}disabled{% endif %}>{{ user.content or '' }}</textarea>
+            <div style="display: flex; gap: 15px; margin-top: 15px; align-items: flex-start;">
+                <div class="form-group" style="flex: 2;">
+                    <label for="content" class="form-label">내용</label>
+                    <textarea id="content" name="content" class="form-textarea" {% if is_readonly %}disabled{% endif %}>{{ user.content or '' }}</textarea>
+                </div>
+                <div style="flex: 1;">
+                    <div class="form-group">
+                        <label class="form-label">현재 첨부파일</label>
+                        <div style="padding: 8px; border: 1px solid #eee; border-radius: 4px; background-color: #f8f9fa;">
+                            {% if user.attachment %}
+                                <a href="{{ url_for('uploaded_file', filename=user.attachment) }}" target="_blank">{{ user.attachment }}</a>
+                                {% if not is_readonly %}
+                                <div style="margin-top: 5px;">
+                                    <input type="checkbox" id="delete_attachment" name="delete_attachment" value="true">
+                                    <label for="delete_attachment">기존 파일 삭제</label>
+                                </div>
+                                {% endif %}
+                            {% else %}
+                                없음
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label class="form-label">첨부파일 변경 <small style="font-size: 0.8em; color: #666; font-weight: normal;">(용량큰거 업로드하지 마세요)</small></label>
+                        <div class="form-input" style="padding: 4px 8px; border-color: #ADD8E6;">
+                            <input type="file" id="attachment" name="attachment" style="border: none; padding: 0;" {% if is_readonly %}disabled{% endif %}>
+                            <input type="hidden" name="existing_attachment" value="{{ user.attachment or '' }}">
+                        </div>
+                    </div>
+                </div>
             </div>
             <div style="margin-top: 20px;">
                 {% if not is_readonly %}
@@ -137,6 +144,8 @@
             const clientDirect = document.getElementById('client_direct');
             const workTypeSelect = document.getElementById('work_type_select');
             const workTypeDirect = document.getElementById('work_type_direct');
+            const ordererSelect = document.getElementById('orderer_select');
+            const ordererDirect = document.getElementById('orderer_direct');
             
             function fetchWorkTypes(clientName, selectedWorkType) {
                 workTypeSelect.disabled = true;
@@ -202,6 +211,40 @@
             quantityInput.addEventListener('input', calculateTotal);
             unitPriceInput.addEventListener('input', calculateTotal);
 
+            // '주문자' 드롭다운 로직
+            function setupOrdererField() {
+                const existingOrderer = "{{ user.remarks or '' }}";
+                // 아래 목록에 주문자를 추가할 수 있습니다.
+                const ordererOptions = ['쿠팡', '마켓컬리', '하이마트'];
+                let isDirectInput = true;
+
+                ordererSelect.innerHTML = '<option value="">선택하세요</option>';
+                ordererOptions.forEach(opt => {
+                    const option = new Option(opt, opt);
+                    if (opt === existingOrderer) {
+                        option.selected = true;
+                        isDirectInput = false;
+                    }
+                    ordererSelect.add(option);
+                });
+                ordererSelect.add(new Option('직접 입력', 'direct'));
+
+                if (isDirectInput && existingOrderer) {
+                    ordererSelect.value = 'direct';
+                    ordererDirect.value = existingOrderer;
+                    ordererDirect.classList.remove('hidden');
+                }
+            }
+
+            ordererSelect.addEventListener('change', function() {
+                if (this.value === 'direct') {
+                    ordererDirect.classList.remove('hidden');
+                } else {
+                    ordererDirect.classList.add('hidden');
+                    ordererDirect.value = '';
+                }
+            });
+
             const initialClient = clientSelect.value;
             const initialWorkType = "{{ user.work_type or '' }}";
             fetchWorkTypes(initialClient, initialWorkType);
@@ -215,7 +258,19 @@
             if (overridePassword) {
                 document.getElementById('override-password-input').value = overridePassword;
             }
+
+            // 페이지 로드 시 주문자 필드 초기화
+            setupOrdererField();
         });
+
+        // [추가] 첨부파일 레이블 클릭 방지
+        const attachmentChangeLabel = document.querySelector('label[for="attachment"]');
+        if (attachmentChangeLabel) {
+            attachmentChangeLabel.addEventListener('click', function(event) {
+                // 레이블 클릭 시 파일 선택 창이 열리는 기본 동작을 막습니다.
+                event.preventDefault();
+            });
+        }
     </script>
 </body>
 </html>
