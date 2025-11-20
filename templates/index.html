@@ -1,14 +1,16 @@
-<!DOCTYPE html>
-<html lang="ko">
+<meta charset="UTF-8">
+<title>데이터 관리 프로그램</title>
 <head>
-    <meta charset="UTF-8">
-    <title>데이터 관리 프로그램</title>
-    <style>
+<style>
+        body { font-family: sans-serif; margin: 2em; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
         body { font-family: sans-serif; margin: 2em; background-color: #f9f9f9; }
         h1, h2 { color: #333; }
         table { width: 100%; border-collapse: collapse; background-color: white; }
         th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-        th { background-color: #f2f2f2; }
+th { background-color: #f2f2f2; }
+        .form-section, .search-section, .data-section { margin-bottom: 2em; }
         .form-section, .search-section, .data-section { 
             margin-bottom: 2em; 
             padding: 20px;
@@ -16,10 +18,9 @@
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        .flash { padding: 1em; margin-bottom: 1em; border-radius: 5px; }
-        .flash.success { background-color: #d4edda; color: #155724; }
-        .flash.error { background-color: #f8d7da; color: #721c24; }
-
+.flash { padding: 1em; margin-bottom: 1em; border-radius: 5px; }
+.flash.success { background-color: #d4edda; color: #155724; }
+.flash.error { background-color: #f8d7da; color: #721c24; }
         /* 폼 디자인 개선 CSS */
         .form-group {
             margin-bottom: 15px;
@@ -63,19 +64,12 @@
         .excel-btn:hover {
             background-color: #218838;
         }
-    </style>
+</style>
 </head>
 <body>
-    <h1>데이터 관리 프로그램v1</h1>
-
-    <!-- 메시지 표시 -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <div class="flash {{ category }}">{{ message }}</div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
+@@ -54,79 +77,92 @@ <h1>데이터 관리 프로그램v2</h1>
+{% endif %}
+{% endwith %}
 
     <!-- 입력 폼 (디자인 개선 버전) -->
     <div class="form-section">
@@ -105,10 +99,11 @@
         </form>
     </div>
 
+    <!-- 검색 폼 -->
     <!-- 검색 폼 (기능 추가 버전) -->
-    <div class="search-section">
+<div class="search-section">
         <h2>데이터 검색</h2>
-        <form action="{{ url_for('index') }}" method="get">
+<form action="{{ url_for('index') }}" method="get">
             <input type="text" name="keyword" placeholder="이름, 연락처 등으로 검색" value="{{ keyword or '' }}" class="form-input" style="width: 50%; display: inline-block;">
             <input type="submit" value="검색" class="submit-btn" style="padding: 10px 15px; font-size: 14px;">
             
@@ -117,13 +112,13 @@
             
             <!-- '엑셀 다운로드' 버튼 추가 -->
             <a href="{{ url_for('download_excel', keyword=keyword) }}" class="excel-btn" style="padding: 10px 15px; font-size: 14px;">엑셀 다운로드</a>
-        </form>
-    </div>
+</form>
+</div>
 
-    <!-- 데이터 목록 -->
-    <div class="data-section">
-        <h2>저장된 데이터 목록</h2>
-        <table>
+<!-- 데이터 목록 -->
+<div class="data-section">
+<h2>저장된 데이터 목록</h2>
+<table>
             <thead>
                 <tr>
                     <th>ID</th>
@@ -155,14 +150,14 @@
                 </tr>
                 {% endfor %}
             </tbody>
-        </table>
+</table>
         <!-- 데이터가 없을 때 메시지 표시 -->
         {% if not users and (request.args.get('show_all') or request.args.get('keyword')) %}
             <p style="text-align: center; padding: 20px;">표시할 데이터가 없습니다.</p>
         {% elif not users %}
             <p style="text-align: center; padding: 20px;">'전체 보기'를 누르거나 검색어를 입력하여 데이터를 조회하세요.</p>
         {% endif %}
-    </div>
+</div>
 </body>
 </html>
 
