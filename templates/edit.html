@@ -33,6 +33,7 @@
     <div class="form-section">
         <form action="{{ url_for('update_user', id=user.id) }}" method="post" enctype="multipart/form-data" id="edit-form">
             <input type="hidden" name="current_author" id="current-author-input">
+            <input type="hidden" name="override_password" id="override-password-input">
             <div class="form-grid">
                 <div class="form-group">
                     <label for="work_date" class="form-label">작업일자</label>
@@ -208,6 +209,12 @@
             // [추가] 소유권 확인을 위해 현재 작성자 이름을 폼에 주입
             const currentAuthor = localStorage.getItem('savedAuthor') || '';
             document.getElementById('current-author-input').value = currentAuthor;
+
+            // [추가] 관리자 권한 확인을 위해 비밀번호를 폼에 주입
+            const overridePassword = new URLSearchParams(window.location.search).get('override_password');
+            if (overridePassword) {
+                document.getElementById('override-password-input').value = overridePassword;
+            }
         });
     </script>
 </body>

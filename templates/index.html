@@ -144,6 +144,10 @@
                     <input type="date" id="end_date" name="end_date" value="{{ end_date or '' }}" class="form-input">
                 </div>
                 <div class="form-group">
+                    <label for="author_filter" class="form-label">작성자 필터</label>
+                    <input type="text" id="author_filter" name="author_filter" placeholder="작성자 이름 (전체: 비워두기)" value="{{ author_filter if author_filter is not none else '' }}" class="form-input">
+                </div>
+                <div class="form-group">
                     <label for="keyword" class="form-label">키워드 검색</label>
                     <input type="text" id="keyword" name="keyword" placeholder="거래처, 작성자, 상품명 등" value="{{ keyword or '' }}" class="form-input">
                 </div>
@@ -151,7 +155,10 @@
                     <button type="submit" class="action-btn" style="font-size: 14px; padding: 10px 15px;">기간/키워드 조회</button>
                 </div>
                 <div class="form-group" style="margin-top: auto;">
-                    <a href="{{ url_for('download_excel', start_date=start_date, end_date=end_date, keyword=keyword) }}" class="action-btn excel-btn" style="font-size: 14px; padding: 10px 15px;">엑셀 다운로드</a>
+                    <button type="button" id="view-all-btn" class="action-btn" style="font-size: 14px; padding: 10px 15px; background-color: #6c757d;">전체보기</button>
+                </div>
+                <div class="form-group" style="margin-top: auto;">
+                    <a href="{{ url_for('download_excel', start_date=start_date, end_date=end_date, keyword=keyword, author_filter=author_filter) }}" class="action-btn excel-btn" style="font-size: 14px; padding: 10px 15px;">엑셀 다운로드</a>
                 </div>
             </div>
         </form>
@@ -243,19 +250,22 @@
                         </td>
                         <td class="management-cell" data-author="{{ user.author }}">
                             {# JavaScript가 이 부분을 제어합니다 #}
-                            {% if user.confirmed %}
-                                <form class="unconfirm-form" action="{{ url_for('unconfirm_user', id=user.id) }}" method="post" style="display: inline;">
-                                    <input type="hidden" name="current_author" class="current-author-input">
-                                    <button type="submit" class="unconfirm-btn" style="background: none; border: none; color: #007bff; cursor: pointer; padding: 0; text-decoration: underline;">확정 취소</button>
-                                </form>
-                            {% else %}
-                                <a class="edit-link" href="{{ url_for('edit_form', id=user.id) }}">수정</a> | 
-                                <a class="delete-link" href="{{ url_for('delete_user', id=user.id) }}" onclick="return confirm('정말 삭제하시겠습니까?');">삭제</a> |
-                                <form action="{{ url_for('confirm_user', id=user.id) }}" method="post" style="display: inline;">
-                                    <input type="hidden" name="current_author" class="current-author-input">
-                                    <button type="submit" style="background: none; border: none; color: #28a745; cursor: pointer; padding: 0; text-decoration: underline;">확정</button>
-                                </form>
-                            {% endif %}
+                            <div class="owner-controls" style="display: none;">
+                                {% if user.confirmed %}
+                                    <form class="unconfirm-form" action="{{ url_for('unconfirm_user', id=user.id) }}" method="post" style="display: inline;">
+                                        <input type="hidden" name="current_author" class="current-author-input">
+                                        <button type="submit" class="unconfirm-btn" style="background: none; border: none; color: #007bff; cursor: pointer; padding: 0; text-decoration: underline;">확정 취소</button>
+                                    </form>
+                                {% else %}
+                                    <a class="edit-link" href="{{ url_for('edit_form', id=user.id) }}">수정</a> | 
+                                    <a class="delete-link" href="{{ url_for('delete_user', id=user.id) }}" onclick="return confirm('정말 삭제하시겠습니까?');">삭제</a> |
+                                    <form class="confirm-form" action="{{ url_for('confirm_user', id=user.id) }}" method="post" style="display: inline;">
+                                        <input type="hidden" name="current_author" class="current-author-input">
+                                        <button type="submit" style="background: none; border: none; color: #28a745; cursor: pointer; padding: 0; text-decoration: underline;">확정</button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                            <button class="admin-manage-btn" style="display: none; font-size: 12px; padding: 2px 5px;">관리</button>
                         </td>
                     </tr>
                     {% endfor %}
@@ -375,7 +385,25 @@
             // 작성자 입력 필드에 변경이 있을 때마다 localStorage에 저장
             authorInput.addEventListener('input', function() {
                 localStorage.setItem('savedAuthor', this.value);
+                // [추가] 작성자 필터 필드에도 동기화
+                document.getElementById('author_filter').value = this.value;
             });
+
+            // [수정] 페이지 로드 시, 작성자 필터에 기본값 설정 및 자동 조회
+            const authorFilterInput = document.getElementById('author_filter');
+            const urlParams = new URLSearchParams(window.location.search);
+            // URL에 아무 파라미터도 없고, 저장된 작성자 이름이 있을 때만 자동 조회 실행
+            if (urlParams.toString() === '' && localStorage.getItem('savedAuthor')) {
+                const savedAuthorForFilter = localStorage.getItem('savedAuthor');
+                if (authorFilterInput.value !== savedAuthorForFilter) {
+                    authorFilterInput.value = savedAuthorForFilter;
+                    // 폼을 자동으로 제출하여 작성자 기준으로 조회
+                    // location.reload() 보다 안정적인 방법으로 변경
+                    const newUrl = new URL(window.location.href);
+                    newUrl.searchParams.set('author_filter', savedAuthorForFilter);
+                    window.location.href = newUrl.href;
+                }
+            }
 
             // [추가] 입력 초기화 버튼 기능
             const resetBtn = document.getElementById('reset-form-btn');
@@ -423,32 +451,88 @@
                 });
             });
 
-            // [추가] 소유권 확인 및 UI 제어
+            // [추가] 전체보기 버튼 기능
+            document.getElementById('view-all-btn').addEventListener('click', function() {
+                // 모든 필터링 필드 초기화
+                document.getElementById('start_date').value = '';
+                document.getElementById('end_date').value = '';
+                document.getElementById('author_filter').value = '';
+                document.getElementById('keyword').value = '';
+                // 폼 제출하여 전체 데이터 조회
+                this.closest('form').submit();
+            });
+
+            // [수정] 소유권 확인 및 UI 제어 로직
             const currentAuthor = localStorage.getItem('savedAuthor') || '';
+            const ADMIN_PASSWORD = "2580";
+
             document.querySelectorAll('.management-cell').forEach(cell => {
                 const recordAuthor = cell.getAttribute('data-author');
-                if (currentAuthor && recordAuthor === currentAuthor) {
-                    // 본인 데이터: 아무것도 하지 않음 (모든 버튼 표시)
+                const isOwner = currentAuthor && recordAuthor === currentAuthor;
+
+                if (isOwner) {
+                    cell.querySelector('.owner-controls').style.display = 'inline';
                 } else {
-                    // 타인 데이터: 모든 관리 버튼 숨김
-                    cell.innerHTML = '<span style="color: #6c757d;">-</span>';
+                    cell.querySelector('.admin-manage-btn').style.display = 'inline';
                 }
             });
 
-            // 소유권 확인을 위해 현재 작성자 이름을 각 폼에 주입
+            // '관리' 버튼 클릭 시 비밀번호 프롬프트
+            document.querySelectorAll('.admin-manage-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const password = prompt("관리자 비밀번호를 입력하세요:");
+                    if (password === ADMIN_PASSWORD) {
+                        const cell = this.closest('.management-cell');
+                        this.style.display = 'none'; // '관리' 버튼 숨기기
+                        cell.querySelector('.owner-controls').style.display = 'inline'; // 원래 버튼들 보이기
+                    } else if (password !== null) {
+                        alert("비밀번호가 틀렸습니다.");
+                    }
+                });
+            });
+
+            // [수정] 소유권 및 관리자 권한 확인을 위해 현재 작성자 이름과 비밀번호를 각 폼에 주입
             document.querySelectorAll('.current-author-input').forEach(input => {
                 input.value = currentAuthor;
             });
             document.getElementById('confirm-all-author').value = currentAuthor;
 
-            // 수정/삭제 링크에 현재 작성자 정보 추가
-            document.querySelectorAll('a.edit-link').forEach(link => {
-                link.href += `?current_author=${encodeURIComponent(currentAuthor)}`;
-            });
-            document.querySelectorAll('a.delete-link').forEach(link => {
-                link.href += `?current_author=${encodeURIComponent(currentAuthor)}`;
+            function addOverridePasswordToForm(form) {
+                const overrideInput = document.createElement('input');
+                overrideInput.type = 'hidden';
+                overrideInput.name = 'override_password';
+                overrideInput.value = ADMIN_PASSWORD;
+                form.appendChild(overrideInput);
+            }
+
+            // 수정/삭제/확정/확정취소 링크 및 폼 제출 시 관리자 비밀번호 추가
+            document.body.addEventListener('submit', function(e) {
+                const form = e.target;
+                const cell = form.closest('.management-cell');
+                if (cell && !isOwner(cell)) {
+                    addOverridePasswordToForm(form);
+                }
             });
 
+            document.body.addEventListener('click', function(e) {
+                if (e.target.matches('a.edit-link, a.delete-link')) {
+                    const cell = e.target.closest('.management-cell');
+                    if (cell && !isOwner(cell)) {
+                        e.preventDefault();
+                        const url = new URL(e.target.href);
+                        url.searchParams.set('current_author', currentAuthor);
+                        url.searchParams.set('override_password', ADMIN_PASSWORD);
+                        window.location.href = url.toString();
+                    } else {
+                         e.target.href += `?current_author=${encodeURIComponent(currentAuthor)}`;
+                    }
+                }
+            });
+
+            function isOwner(cell) {
+                return currentAuthor && cell.getAttribute('data-author') === currentAuthor;
+            }
         });
     </script>
 </body>
+</html>

@@ -73,6 +73,9 @@ HEADER_MAP = {
 
 # [추가] 확정 취소 비밀번호
 CONFIRM_CANCEL_PASSWORD = "1234"
+# [추가] 관리자 권한 비밀번호
+ADMIN_OVERRIDE_PASSWORD = "2580"
+
 
 def get_db_connection():
     """데이터베이스 연결을 가져오는 함수"""
@@ -138,7 +141,7 @@ def init_db():
     if not os.path.exists(ATTACHMENT_DIR):
         os.makedirs(ATTACHMENT_DIR)
 
-def get_filtered_data(start_date, end_date, search_keyword):
+def get_filtered_data(start_date, end_date, search_keyword, author_filter):
     """[신규] 필터링된 데이터를 조회하는 공통 함수"""
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -164,6 +167,11 @@ def get_filtered_data(start_date, end_date, search_keyword):
                                 OR tracking_number LIKE {placeholder})"""
         conditions.append(search_condition)
         params.extend([search_term] * 5)
+    
+    # [추가] 작성자 필터링 로직
+    if author_filter:
+        conditions.append(f"author = {placeholder}")
+        params.append(author_filter)
 
     if conditions:
         query = f"{base_query} WHERE {' AND '.join(conditions)} ORDER BY work_date ASC, id ASC"
@@ -193,9 +201,10 @@ def index():
     start_date_str = request.args.get('start_date')
     end_date_str = request.args.get('end_date')
     search_keyword = request.args.get('keyword', '')
+    author_filter = request.args.get('author_filter') # [추가] 작성자 필터 파라미터
     
     # [추가] 초기 접속 시, 기본값을 현재 월의 시작일과 종료일로 설정
-    if not start_date_str and not end_date_str:
+    if not start_date_str and not end_date_str and not search_keyword and author_filter is None: # author_filter가 빈 문자열일 수 있으므로 None으로 체크
         today = datetime.today()
         # 현재 월의 첫째 날
         start_date_str = today.replace(day=1).strftime('%Y-%m-%d')
@@ -204,7 +213,7 @@ def index():
         end_date_str = today.replace(day=last_day).strftime('%Y-%m-%d')
 
     # [수정] 공통 함수를 사용하여 데이터 조회
-    rows, _ = get_filtered_data(start_date_str, end_date_str, search_keyword)
+    rows, _ = get_filtered_data(start_date_str, end_date_str, search_keyword, author_filter)
 
     # [추가] 조회된 데이터의 건수 계산
     total_count = len(rows)
@@ -213,9 +222,9 @@ def index():
 
     today_date = datetime.today().strftime('%Y-%m-%d')
     clients = list(CLIENT_WORK_DATA.keys())
-    return render_template('index.html', users=rows, 
+    return render_template('index.html', users=rows,
                            start_date=start_date_str, end_date=end_date_str, keyword=search_keyword,
-                           today_date=today_date, clients=clients,
+                           author_filter=author_filter, today_date=today_date, clients=clients,
                            total_count=total_count, confirmed_count=confirmed_count, unconfirmed_count=unconfirmed_count)
 
 @app.route('/api/work-items/<client_name>')
@@ -291,11 +300,16 @@ def edit_form(id):
     
     # [추가] 확정된 데이터는 수정 페이지에서 read-only로 처리하기 위한 플래그 전달
     is_readonly = user['confirmed']
-    
-    # [추가] 소유권 확인을 위한 현재 사용자 이름 전달 (JavaScript에서 사용)
+
+    # [수정] 소유권 또는 관리자 권한 확인
     current_author = request.args.get('current_author', '')
-    if not is_readonly and user['author'] != current_author:
-        flash('본인이 작성한 데이터만 수정할 수 있습니다.', 'error')
+    override_password = request.args.get('override_password', '')
+
+    is_owner = user['author'] == current_author
+    is_admin = override_password == ADMIN_OVERRIDE_PASSWORD
+
+    if not is_readonly and not is_owner and not is_admin:
+        flash('타인의 데이터를 수정할 권한이 없습니다.', 'error')
         return redirect(url_for('index'))
 
     if is_readonly:
@@ -321,14 +335,19 @@ def update_user(id):
     remarks = request.form['remarks']
 
     # [수정] 소유권 및 확정 여부 확인
-    current_author = request.form.get('current_author')
+    current_author = request.form.get('current_author', '')
+    override_password = request.form.get('override_password', '')
+
     conn = get_db_connection()
     cursor = conn.cursor()
     placeholder = '%s' if DATABASE_URL else '?'
     cursor.execute(f"SELECT author, confirmed FROM user_data WHERE id = {placeholder}", (id,))
     record = cursor.fetchone()
-    if record and (record['confirmed'] or record['author'] != current_author):
-        conn.close()
+
+    is_owner = record and record['author'] == current_author
+    is_admin = override_password == ADMIN_OVERRIDE_PASSWORD
+
+    if record and (record['confirmed'] or (not is_owner and not is_admin)):
         flash('확정된 데이터는 수정할 수 없습니다.', 'error')
         return redirect(url_for('index'))
     
@@ -388,13 +407,17 @@ def delete_user(id):
     placeholder = '%s' if DATABASE_URL else '?'
 
     # [수정] 소유권 및 확정 여부 확인
-    current_author = request.args.get('current_author')
+    current_author = request.args.get('current_author', '')
+    override_password = request.args.get('override_password', '')
     cursor.execute(f"SELECT author, confirmed, attachment FROM user_data WHERE id = {placeholder}", (id,))
     record = cursor.fetchone()
 
-    if record and (record['confirmed'] or record['author'] != current_author):
+    is_owner = record and record['author'] == current_author
+    is_admin = override_password == ADMIN_OVERRIDE_PASSWORD
+
+    if record and (record['confirmed'] or (not is_owner and not is_admin)):
         conn.close()
-        flash('본인이 작성했거나 확정되지 않은 데이터만 삭제할 수 있습니다.', 'error')
+        flash('확정되었거나 권한이 없는 데이터는 삭제할 수 없습니다.', 'error')
         return redirect(request.referrer or url_for('index'))
     
     if record and record['attachment']:
@@ -413,20 +436,26 @@ def delete_user(id):
 # [추가] 단일 건 확정 처리
 @app.route('/confirm/<int:id>', methods=['POST'])
 def confirm_user(id):
-    # [추가] 소유권 확인
-    current_author = request.form.get('current_author')
+    # [수정] 소유권 또는 관리자 권한 확인
+    current_author = request.form.get('current_author', '')
+    override_password = request.form.get('override_password', '')
     conn = get_db_connection()
     cursor = conn.cursor()
     placeholder = '%s' if DATABASE_URL else '?'
 
     cursor.execute(f"SELECT author FROM user_data WHERE id = {placeholder}", (id,))
     record = cursor.fetchone()
-    if record and record['author'] != current_author:
+
+    is_owner = record and record['author'] == current_author
+    is_admin = override_password == ADMIN_OVERRIDE_PASSWORD
+
+    if not is_owner and not is_admin:
         conn.close()
-        flash('본인이 작성한 데이터만 확정할 수 있습니다.', 'error')
+        flash('타인의 데이터를 확정할 권한이 없습니다.', 'error')
         return redirect(request.referrer or url_for('index'))
 
-    cursor.execute(f"UPDATE user_data SET confirmed = TRUE WHERE id = {placeholder} AND author = {placeholder}", (id, current_author))
+    # 소유권자나 관리자 모두 확정 가능
+    cursor.execute(f"UPDATE user_data SET confirmed = TRUE WHERE id = {placeholder}", (id,))
     conn.commit()
     conn.close()
     flash(f'고유번호 {id} 데이터가 확정 처리되었습니다.', 'success')
@@ -466,25 +495,30 @@ def confirm_all():
 @app.route('/unconfirm/<int:id>', methods=['POST'])
 def unconfirm_user(id):
     password = request.form.get('password')
-    current_author = request.form.get('current_author')
+    current_author = request.form.get('current_author', '')
+    override_password = request.form.get('override_password', '')
 
     if password != CONFIRM_CANCEL_PASSWORD:
         flash('비밀번호가 일치하지 않습니다.', 'error')
         return redirect(request.referrer or url_for('index'))
     
-    # [추가] 소유권 확인
+    # [수정] 소유권 또는 관리자 권한 확인
     conn = get_db_connection()
     cursor = conn.cursor()
     placeholder = '%s' if DATABASE_URL else '?'
 
     cursor.execute(f"SELECT author FROM user_data WHERE id = {placeholder}", (id,))
     record = cursor.fetchone()
-    if record and record['author'] != current_author:
+
+    is_owner = record and record['author'] == current_author
+    is_admin = override_password == ADMIN_OVERRIDE_PASSWORD
+
+    if not is_owner and not is_admin:
         conn.close()
-        flash('본인이 작성한 데이터만 확정 취소할 수 있습니다.', 'error')
+        flash('타인의 데이터 확정을 취소할 권한이 없습니다.', 'error')
         return redirect(request.referrer or url_for('index'))
 
-    cursor.execute(f"UPDATE user_data SET confirmed = FALSE WHERE id = {placeholder} AND author = {placeholder}", (id, current_author))
+    cursor.execute(f"UPDATE user_data SET confirmed = FALSE WHERE id = {placeholder}", (id,))
     conn.commit()
     conn.close()
     flash(f'고유번호 {id} 데이터의 확정이 취소되었습니다.', 'success')
@@ -497,9 +531,10 @@ def download_excel():
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
     search_keyword = request.args.get('keyword')
+    author_filter = request.args.get('author_filter')
 
     # [수정] index와 동일한 공통 함수를 재사용하여 데이터 일관성 및 안정성 확보
-    rows, columns = get_filtered_data(start_date, end_date, search_keyword)
+    rows, columns = get_filtered_data(start_date, end_date, search_keyword, author_filter)
     
     # 조회된 데이터가 없는 경우 빈 데이터프레임 생성
     if not rows:
