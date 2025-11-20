@@ -43,11 +43,11 @@ def init_db():
     
     if not DATABASE_URL:
         conn = get_db_connection()
-        # 송장번호(tracking_number) 필드 추가
+        # work_date 필드 타입을 DATE로 변경하여 DB 호환성 및 성능 향상
         conn.execute('''
            CREATE TABLE IF NOT EXISTS user_data (
                id INTEGER PRIMARY KEY AUTOINCREMENT,
-               work_date TEXT NOT NULL,
+               work_date DATE NOT NULL,
                client TEXT NOT NULL,
                author TEXT,
                product_code TEXT,
@@ -101,7 +101,8 @@ def index():
         query = f"{base_query} WHERE {' AND '.join(conditions)} ORDER BY id DESC"
         cursor.execute(query, tuple(params))
     else:
-        pass
+        # 조회 조건이 없을 경우, 모든 데이터를 조회하도록 수정
+        cursor.execute(f"{base_query} ORDER BY id DESC")
 
     rows = cursor.fetchall()
     conn.close()
@@ -301,6 +302,7 @@ def download_excel():
         query = f"{base_query} WHERE {' AND '.join(conditions)} ORDER BY id DESC"
         cursor.execute(query, tuple(params))
     else:
+        # 조회 조건이 없을 경우, 모든 데이터를 조회하도록 수정
         query = f"{base_query} ORDER BY id DESC"
         cursor.execute(query)
 
