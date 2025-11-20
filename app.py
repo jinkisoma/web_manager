@@ -170,10 +170,12 @@ def add_user():
         flash('작업일자와 거래처는 필수 항목입니다.', 'error')
         return redirect(url_for('index'))
 
+    # [수정] 서버 DB 오류 방지를 위해 숫자 타입의 기본값을 0으로 설정
     quantity = int(quantity_str) if quantity_str else 0
     unit_price = float(unit_price_str) if unit_price_str else 0.0
     total_amount = quantity * unit_price
     
+    # [수정] 박스 수량은 선택적이므로, 값이 없으면 None(NULL)으로 처리
     box_quantity = int(box_quantity_str) if box_quantity_str else None
 
     attachment_filename = ''
@@ -191,11 +193,12 @@ def add_user():
                 (work_date, client, author, product_code, tracking_number, work_type, content, product_name, quantity, box_quantity, unit_price, total_amount, attachment, remarks) 
                 VALUES ({", ".join([placeholder]*14)})"""
 
+    # [수정] DB에 전달되는 값들이 올바른 타입인지 확인
     cursor.execute(query, (
         work_date, client, author, product_code, tracking_number, work_type, content, product_name, 
-        quantity if quantity_str else None, 
+        quantity, 
         box_quantity, 
-        unit_price if unit_price_str else None, 
+        unit_price, 
         total_amount, 
         attachment_filename, remarks
     ))
@@ -244,9 +247,12 @@ def update_user(id):
         flash('작업일자와 거래처는 필수 항목입니다.', 'error')
         return redirect(url_for('edit_form', id=id))
 
+    # [수정] 서버 DB 오류 방지를 위해 숫자 타입의 기본값을 0으로 설정
     quantity = int(quantity_str) if quantity_str else 0
     unit_price = float(unit_price_str) if unit_price_str else 0.0
     total_amount = quantity * unit_price
+    
+    # [수정] 박스 수량은 선택적이므로, 값이 없으면 None(NULL)으로 처리
     box_quantity = int(box_quantity_str) if box_quantity_str else None
 
     conn = get_db_connection()
@@ -260,11 +266,12 @@ def update_user(id):
                 remarks={placeholder} 
                 WHERE id={placeholder}"""
 
+    # [수정] DB에 전달되는 값들이 올바른 타입인지 확인
     cursor.execute(query, (
         work_date, client, author, product_code, tracking_number, work_type, content, product_name,
-        quantity if quantity_str else None,
+        quantity,
         box_quantity,
-        unit_price if unit_price_str else None,
+        unit_price,
         total_amount,
         remarks,
         id
