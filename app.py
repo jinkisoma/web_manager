@@ -82,7 +82,11 @@ def index():
     params = []
 
     if month_query:
-        conditions.append(f"strftime('%Y-%m', work_date) = {placeholder}")
+        # DB 호환성을 위해 날짜 포맷 함수 분기 처리
+        if DATABASE_URL: # PostgreSQL
+            conditions.append(f"to_char(work_date, 'YYYY-MM') = {placeholder}")
+        else: # SQLite
+            conditions.append(f"strftime('%Y-%m', work_date) = {placeholder}")
         params.append(month_query)
 
     if search_keyword:
@@ -278,7 +282,11 @@ def download_excel():
     params = []
 
     if month_query:
-        conditions.append(f"strftime('%Y-%m', work_date) = {placeholder}")
+        # DB 호환성을 위해 날짜 포맷 함수 분기 처리
+        if DATABASE_URL: # PostgreSQL
+            conditions.append(f"to_char(work_date, 'YYYY-MM') = {placeholder}")
+        else: # SQLite
+            conditions.append(f"strftime('%Y-%m', work_date) = {placeholder}")
         params.append(month_query)
 
     if search_keyword:
@@ -321,4 +329,3 @@ def uploaded_file(filename):
 if __name__ == '__main__':
     # init_db() # DB를 처음 생성할 때만 주석을 풀고 실행하세요.
     app.run(debug=True)
-
