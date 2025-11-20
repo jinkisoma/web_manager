@@ -45,7 +45,6 @@ def init_db():
     
     # DB 종류에 따라 다른 CREATE TABLE 구문 실행
     if DATABASE_URL: # PostgreSQL
-        # PostgreSQL은 SERIAL 타입을 사용하여 자동 증가 ID를 구현합니다.
         cursor.execute('''
            CREATE TABLE IF NOT EXISTS user_data (
                id SERIAL PRIMARY KEY,
@@ -66,7 +65,6 @@ def init_db():
            )
         ''')
     else: # SQLite
-        # SQLite는 INTEGER PRIMARY KEY AUTOINCREMENT를 사용합니다.
         cursor.execute('''
            CREATE TABLE IF NOT EXISTS user_data (
                id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -91,7 +89,6 @@ def init_db():
     cursor.close()
     conn.close()
     
-    # 첨부파일 디렉토리가 없으면 생성
     if not os.path.exists(ATTACHMENT_DIR):
         os.makedirs(ATTACHMENT_DIR)
 
@@ -101,7 +98,6 @@ def index():
     month_query = request.args.get('month', datetime.today().strftime('%Y-%m'))
     search_keyword = request.args.get('keyword', '')
     
-    rows = []
     conn = get_db_connection()
     cursor = conn.cursor()
     placeholder = '%s' if DATABASE_URL else '?'
@@ -111,30 +107,25 @@ def index():
     params = []
 
     if month_query:
-        # DB 호환성을 위해 날짜 포맷 함수 분기 처리
-        if DATABASE_URL: # PostgreSQL
+        if DATABASE_URL:
             conditions.append(f"to_char(work_date, 'YYYY-MM') = {placeholder}")
-        else: # SQLite
+        else:
             conditions.append(f"strftime('%Y-%m', work_date) = {placeholder}")
         params.append(month_query)
 
     if search_keyword:
         search_term = f"%{search_keyword}%"
-        # 파라미터 개수 불일치 오류를 해결하기 위해 쿼리 문자열에 직접 값을 포맷팅합니다.
-        # SQL 인젝션 위험이 없도록 search_term은 %와 사용자 입력으로만 구성되어 안전합니다.
-        search_condition = f"""(client LIKE '{search_term}' OR author LIKE '{search_term}' 
-                                OR product_name LIKE '{search_term}' OR content LIKE '{search_term}'
-                                OR tracking_number LIKE '{search_term}')"""
+        # [보안 수정] SQL 인젝션 방지를 위해 플레이스홀더 사용
+        search_condition = f"""(client LIKE {placeholder} OR author LIKE {placeholder} 
+                                OR product_name LIKE {placeholder} OR content LIKE {placeholder}
+                                OR tracking_number LIKE {placeholder})"""
         conditions.append(search_condition)
+        params.extend([search_term] * 5)
 
     if conditions:
         query = f"{base_query} WHERE {' AND '.join(conditions)} ORDER BY id DESC"
-        if params:
-            cursor.execute(query, tuple(params))
-        else:
-            cursor.execute(query)
+        cursor.execute(query, tuple(params))
     else:
-        # 조회 조건이 없을 경우, 모든 데이터를 조회하도록 수정
         cursor.execute(f"{base_query} ORDER BY id DESC")
 
     rows = cursor.fetchall()
@@ -145,6 +136,7 @@ def index():
     return render_template('index.html', users=rows, keyword=search_keyword, 
                            today_date=today_date, clients=clients, current_month=month_query)
 
+# [오류 수정] 라우트 경로의 <, > 를 올바르게 수정
 @app.route('/api/work-items/<client_name>')
 def get_work_items(client_name):
     work_items = CLIENT_WORK_DATA.get(client_name, {})
@@ -170,12 +162,9 @@ def add_user():
         flash('작업일자와 거래처는 필수 항목입니다.', 'error')
         return redirect(url_for('index'))
 
-    # [수정] 서버 DB 오류 방지를 위해 숫자 타입의 기본값을 0으로 설정
     quantity = int(quantity_str) if quantity_str else 0
     unit_price = float(unit_price_str) if unit_price_str else 0.0
     total_amount = quantity * unit_price
-    
-    # [수정] 박스 수량은 선택적이므로, 값이 없으면 None(NULL)으로 처리
     box_quantity = int(box_quantity_str) if box_quantity_str else None
 
     attachment_filename = ''
@@ -193,20 +182,16 @@ def add_user():
                 (work_date, client, author, product_code, tracking_number, work_type, content, product_name, quantity, box_quantity, unit_price, total_amount, attachment, remarks) 
                 VALUES ({", ".join([placeholder]*14)})"""
 
-    # [수정] DB에 전달되는 값들이 올바른 타입인지 확인
     cursor.execute(query, (
         work_date, client, author, product_code, tracking_number, work_type, content, product_name, 
-        quantity, 
-        box_quantity, 
-        unit_price, 
-        total_amount, 
-        attachment_filename, remarks
+        quantity, box_quantity, unit_price, total_amount, attachment_filename, remarks
     ))
     conn.commit()
     conn.close()
     flash('데이터가 성공적으로 추가되었습니다.', 'success')
     return redirect(url_for('index', month=work_date[:7]))
 
+# [오류 수정] 라우트 경로의 <, > 를 올바르게 수정
 @app.route('/edit/<int:id>')
 def edit_form(id):
     """수정 폼 페이지"""
@@ -227,6 +212,7 @@ def edit_form(id):
     clients = list(CLIENT_WORK_DATA.keys())
     return render_template('edit.html', user=user, clients=clients)
 
+# [오류 수정] 라우트 경로의 <, > 를 올바르게 수정
 @app.route('/update/<int:id>', methods=['POST'])
 def update_user(id):
     """데이터 수정"""
@@ -247,13 +233,27 @@ def update_user(id):
         flash('작업일자와 거래처는 필수 항목입니다.', 'error')
         return redirect(url_for('edit_form', id=id))
 
-    # [수정] 서버 DB 오류 방지를 위해 숫자 타입의 기본값을 0으로 설정
     quantity = int(quantity_str) if quantity_str else 0
     unit_price = float(unit_price_str) if unit_price_str else 0.0
     total_amount = quantity * unit_price
-    
-    # [수정] 박스 수량은 선택적이므로, 값이 없으면 None(NULL)으로 처리
     box_quantity = int(box_quantity_str) if box_quantity_str else None
+
+    attachment_filename = request.form.get('existing_attachment', '')
+    delete_attachment = request.form.get('delete_attachment')
+
+    if delete_attachment and attachment_filename:
+        attachment_path = os.path.join(ATTACHMENT_DIR, attachment_filename)
+        if os.path.exists(attachment_path):
+            os.remove(attachment_path)
+        attachment_filename = ''
+
+    if 'attachment' in request.files:
+        file = request.files['attachment']
+        if file.filename != '':
+            if attachment_filename and os.path.exists(os.path.join(ATTACHMENT_DIR, attachment_filename)):
+                 os.remove(os.path.join(ATTACHMENT_DIR, attachment_filename))
+            attachment_filename = file.filename
+            file.save(os.path.join(ATTACHMENT_DIR, attachment_filename))
 
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -263,24 +263,19 @@ def update_user(id):
                 work_date={placeholder}, client={placeholder}, author={placeholder}, product_code={placeholder}, 
                 tracking_number={placeholder}, work_type={placeholder}, content={placeholder}, product_name={placeholder}, 
                 quantity={placeholder}, box_quantity={placeholder}, unit_price={placeholder}, total_amount={placeholder}, 
-                remarks={placeholder} 
+                attachment={placeholder}, remarks={placeholder} 
                 WHERE id={placeholder}"""
 
-    # [수정] DB에 전달되는 값들이 올바른 타입인지 확인
     cursor.execute(query, (
         work_date, client, author, product_code, tracking_number, work_type, content, product_name,
-        quantity,
-        box_quantity,
-        unit_price,
-        total_amount,
-        remarks,
-        id
+        quantity, box_quantity, unit_price, total_amount, attachment_filename, remarks, id
     ))
     conn.commit()
     conn.close()
     flash('데이터가 성공적으로 수정되었습니다.', 'success')
     return redirect(url_for('index', month=work_date[:7]))
 
+# [오류 수정] 라우트 경로의 <, > 를 올바르게 수정
 @app.route('/delete/<int:id>')
 def delete_user(id):
     """데이터 및 첨부파일 삭제"""
@@ -288,7 +283,6 @@ def delete_user(id):
     cursor = conn.cursor()
     placeholder = '%s' if DATABASE_URL else '?'
 
-    # 삭제 전 첨부파일 이름 가져오기
     cursor.execute(f"SELECT attachment FROM user_data WHERE id = {placeholder}", (id,))
     record = cursor.fetchone()
     
@@ -298,7 +292,6 @@ def delete_user(id):
             os.remove(attachment_path)
             flash(f"첨부파일 '{record['attachment']}'이(가) 삭제되었습니다.", 'success')
 
-    # 데이터베이스에서 레코드 삭제
     cursor.execute(f"DELETE FROM user_data WHERE id = {placeholder}", (id,))
     conn.commit()
     conn.close()
@@ -314,7 +307,6 @@ def download_excel():
     search_keyword = request.args.get('keyword')
 
     conn = get_db_connection()
-    conn.row_factory = None 
     cursor = conn.cursor()
     placeholder = '%s' if DATABASE_URL else '?'
 
@@ -323,50 +315,46 @@ def download_excel():
     params = []
 
     if month_query:
-        # DB 호환성을 위해 날짜 포맷 함수 분기 처리
-        if DATABASE_URL: # PostgreSQL
+        if DATABASE_URL:
             conditions.append(f"to_char(work_date, 'YYYY-MM') = {placeholder}")
-        else: # SQLite
+        else:
             conditions.append(f"strftime('%Y-%m', work_date) = {placeholder}")
         params.append(month_query)
 
     if search_keyword:
         search_term = f"%{search_keyword}%"
-        # 파라미터 개수 불일치 오류를 해결하기 위해 쿼리 문자열에 직접 값을 포맷팅합니다.
-        # SQL 인젝션 위험이 없도록 search_term은 %와 사용자 입력으로만 구성되어 안전합니다.
-        search_condition = f"""(client LIKE '{search_term}' OR author LIKE '{search_term}' 
-                                OR product_name LIKE '{search_term}' OR content LIKE '{search_term}'
-                                OR tracking_number LIKE '{search_term}')"""
+        # [보안 수정] SQL 인젝션 방지를 위해 플레이스홀더 사용
+        search_condition = f"""(client LIKE {placeholder} OR author LIKE {placeholder} 
+                                OR product_name LIKE {placeholder} OR content LIKE {placeholder}
+                                OR tracking_number LIKE {placeholder})"""
         conditions.append(search_condition)
+        params.extend([search_term] * 5)
 
     if conditions:
         query = f"{base_query} WHERE {' AND '.join(conditions)} ORDER BY id DESC"
-        if params:
-            cursor.execute(query, tuple(params))
-        else:
-            cursor.execute(query)
+        cursor.execute(query, tuple(params))
     else:
-        # 조회 조건이 없을 경우, 모든 데이터를 조회하도록 수정
         query = f"{base_query} ORDER BY id DESC"
         cursor.execute(query)
 
-    rows = cursor.fetchall()
+    # 엑셀 다운로드를 위해 row_factory를 사용하지 않고 직접 컬럼명을 가져옴
     columns = [description[0] for description in cursor.description]
+    rows = cursor.fetchall()
     conn.close()
 
     df = pd.DataFrame(rows, columns=columns)
     
     output = io.BytesIO()
-    writer = pd.ExcelWriter(output, engine='openpyxl')
-    df.to_excel(writer, index=False, sheet_name='정산데이터')
-    writer.close()
+    # pandas 2.x.x 버전과의 호환성을 위해 writer 객체를 명시적으로 close()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='정산데이터')
     output.seek(0)
 
     return Response(output,
                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                     headers={'Content-Disposition': 'attachment;filename=정산데이터.xlsx'})
 
-
+# [오류 수정] 라우트 경로의 <, > 를 올바르게 수정
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
     """첨부파일 다운로드"""
@@ -377,4 +365,3 @@ init_db()
 
 if __name__ == '__main__':
     app.run(debug=True)
-

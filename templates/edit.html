@@ -24,11 +24,11 @@
     <h1>데이터 수정 (ID: {{ user.id }})</h1>
 
     <div class="form-section">
-        <form action="{{ url_for('update_user', id=user.id) }}" method="post">
+        <form action="{{ url_for('update_user', id=user.id) }}" method="post" enctype="multipart/form-data">
             <div class="form-grid">
                 <div class="form-group">
                     <label for="work_date" class="form-label">작업일자</label>
-                    <input type="date" id="work_date" name="work_date" class="form-input" value="{{ user.work_date if user.work_date else '' }}" required>
+                    <input type="date" id="work_date" name="work_date" class="form-input" value="{{ user.work_date.strftime('%Y-%m-%d') if user.work_date else '' }}" required>
                 </div>
                 <div class="form-group">
                     <label for="client_select" class="form-label">거래처</label>
@@ -44,7 +44,7 @@
                 <div class="form-group">
                     <label for="work_type_select" class="form-label">작업 구분</label>
                     <select id="work_type_select" name="work_type_select" class="form-select">
-                        <option value="{{ user.work_type }}">{{ user.work_type }}</option>
+                        <!-- 자바스크립트로 채워짐 -->
                     </select>
                     <input type="text" id="work_type_direct" name="work_type_direct" class="form-input hidden" placeholder="작업 구분 직접 입력">
                 </div>
@@ -84,16 +84,24 @@
                     <label for="remarks" class="form-label">비고</label>
                     <input type="text" id="remarks" name="remarks" class="form-input" value="{{ user.remarks or '' }}">
                 </div>
-                 <div class="form-group">
+                <div class="form-group">
                     <label class="form-label">현재 첨부파일</label>
                     <div style="padding: 8px; border: 1px solid #eee; border-radius: 4px; background-color: #f8f9fa;">
                         {% if user.attachment %}
                             <a href="{{ url_for('uploaded_file', filename=user.attachment) }}" target="_blank">{{ user.attachment }}</a>
+                            <div style="margin-top: 5px;">
+                                <input type="checkbox" id="delete_attachment" name="delete_attachment" value="true">
+                                <label for="delete_attachment">기존 파일 삭제</label>
+                            </div>
                         {% else %}
                             없음
                         {% endif %}
-                        <small style="display: block; color: #6c757d;">(파일 변경/삭제는 지원되지 않습니다. 필요 시 항목을 삭제 후 재등록하세요.)</small>
                     </div>
+                </div>
+                <div class="form-group">
+                    <label for="attachment" class="form-label">첨부파일 변경</label>
+                    <input type="file" id="attachment" name="attachment" class="form-input">
+                    <input type="hidden" name="existing_attachment" value="{{ user.attachment or '' }}">
                 </div>
             </div>
             <div class="form-group" style="margin-top: 15px;">
@@ -102,7 +110,7 @@
             </div>
             <div style="margin-top: 20px;">
                 <input type="submit" value="수정 완료" class="submit-btn">
-                <a href="{{ url_for('index', month=user.work_date[:7] if user.work_date else '') }}" class="cancel-btn">취소</a>
+                <a href="{{ url_for('index', month=user.work_date.strftime('%Y-%m') if user.work_date else '') }}" class="cancel-btn">취소</a>
             </div>
         </form>
     </div>
@@ -114,13 +122,62 @@
             const totalAmountInput = document.getElementById('total_amount');
             const clientSelect = document.getElementById('client_select');
             const clientDirect = document.getElementById('client_direct');
+            const workTypeSelect = document.getElementById('work_type_select');
+            const workTypeDirect = document.getElementById('work_type_direct');
+            
+            // [기능 개선] 수정 페이지에서도 작업 구분 동적 로딩 기능 추가
+            function fetchWorkTypes(clientName, selectedWorkType) {
+                workTypeSelect.disabled = true;
+                workTypeSelect.innerHTML = '<option>불러오는 중...</option>';
+                if (!clientName || clientName === 'direct') {
+                    workTypeSelect.innerHTML = '<option value="">거래처를 먼저 선택하세요</option>';
+                    workTypeSelect.disabled = true;
+                    return;
+                }
+
+                fetch(`/api/work-items/${clientName}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        workTypeSelect.innerHTML = '<option value="">선택하세요</option>';
+                        let workTypeFound = false;
+                        for (const workType in data) {
+                            const option = new Option(workType, workType);
+                            if (workType === selectedWorkType) {
+                                option.selected = true;
+                                workTypeFound = true;
+                            }
+                            workTypeSelect.add(option);
+                        }
+                        
+                        // 기존 작업 구분이 목록에 없는 경우 (직접 입력 등)
+                        if (!workTypeFound && selectedWorkType) {
+                            const option = new Option(selectedWorkType, selectedWorkType, true, true);
+                            workTypeSelect.add(option);
+                        }
+
+                        workTypeSelect.add(new Option('직접 입력', 'direct'));
+                        workTypeSelect.disabled = false;
+                    });
+            }
 
             clientSelect.addEventListener('change', function() {
                 if (this.value === 'direct') {
                     clientDirect.classList.remove('hidden');
+                    workTypeSelect.disabled = true;
+                    workTypeSelect.innerHTML = '<option value="">거래처를 먼저 선택하세요</option>';
                 } else {
                     clientDirect.classList.add('hidden');
                     clientDirect.value = '';
+                    fetchWorkTypes(this.value, null); // 새 거래처 선택 시 기존 선택 초기화
+                }
+            });
+
+            workTypeSelect.addEventListener('change', function() {
+                if (this.value === 'direct') {
+                    workTypeDirect.classList.remove('hidden');
+                } else {
+                    workTypeDirect.classList.add('hidden');
+                    workTypeDirect.value = '';
                 }
             });
 
@@ -132,8 +189,12 @@
 
             quantityInput.addEventListener('input', calculateTotal);
             unitPriceInput.addEventListener('input', calculateTotal);
+
+            // 페이지 로드 시, 현재 설정된 거래처에 맞는 작업 구분 목록을 불러옴
+            const initialClient = clientSelect.value;
+            const initialWorkType = "{{ user.work_type or '' }}";
+            fetchWorkTypes(initialClient, initialWorkType);
         });
     </script>
 </body>
 </html>
-
