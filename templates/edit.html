@@ -4,21 +4,125 @@
     <meta charset="UTF-8">
     <title>데이터 수정</title>
     <style>
-        body { font-family: sans-serif; margin: 2em; }
+        body { font-family: sans-serif; margin: 2em; background-color: #f9f9f9; }
+        h1 { color: #333; }
+        .form-section { margin-bottom: 2em; padding: 20px; background-color: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; }
+        .form-group { display: flex; flex-direction: column; }
+        .form-label { margin-bottom: 5px; font-weight: bold; }
+        .form-input, .form-select, .form-textarea { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        .form-textarea { min-height: 80px; resize: vertical; }
+        .submit-btn, .cancel-btn { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; text-decoration: none; display: inline-block; margin-right: 10px; }
+        .submit-btn { background-color: #28a745; color: white; }
+        .submit-btn:hover { background-color: #218838; }
+        .cancel-btn { background-color: #6c757d; color: white; }
+        .cancel-btn:hover { background-color: #5a6268; }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
-    <h1>데이터 수정</h1>
-    <form action="{{ url_for('update_user', id=user.id) }}" method="post">
-        <p>이름: <input type="text" name="name" value="{{ user.name }}" required></p>
-        <p>연락처: <input type="text" name="phone" value="{{ user.phone }}"></p>
-        <p>이메일: <input type="email" name="email" value="{{ user.email }}"></p>
-        <p>메모: <input type="text" name="memo" value="{{ user.memo }}"></p>
-        <p>첨부파일: {{ user.attachment or '없음' }} (파일 변경은 지원되지 않습니다)</p>
-        <p>
-            <input type="submit" value="수정 완료">
-            <a href="{{ url_for('index') }}">취소</a>
-        </p>
-    </form>
+    <h1>데이터 수정 (ID: {{ user.id }})</h1>
+
+    <div class="form-section">
+        <form action="{{ url_for('update_user', id=user.id) }}" method="post">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="work_date" class="form-label">작업일자</label>
+                    <input type="date" id="work_date" name="work_date" class="form-input" value="{{ user.work_date }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="client_select" class="form-label">거래처</label>
+                    <select id="client_select" name="client_select" class="form-select" required>
+                        <option value="">선택하세요</option>
+                        {% for client in clients %}
+                        <option value="{{ client }}" {% if client == user.client %}selected{% endif %}>{{ client }}</option>
+                        {% endfor %}
+                        <option value="direct">직접 입력</option>
+                    </select>
+                    <input type="text" id="client_direct" name="client_direct" class="form-input {% if user.client not in clients %}''{% else %}hidden{% endif %}" placeholder="거래처 직접 입력" value="{% if user.client not in clients %}{{ user.client }}{% endif %}">
+                </div>
+                <div class="form-group">
+                    <label for="work_type_select" class="form-label">작업 구분</label>
+                    <select id="work_type_select" name="work_type_select" class="form-select">
+                        <option value="{{ user.work_type }}">{{ user.work_type }}</option>
+                    </select>
+                    <input type="text" id="work_type_direct" name="work_type_direct" class="form-input hidden" placeholder="작업 구분 직접 입력">
+                </div>
+                <div class="form-group">
+                    <label for="author" class="form-label">작성자</label>
+                    <input type="text" id="author" name="author" class="form-input" value="{{ user.author or '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="product_code" class="form-label">업체상품코드</label>
+                    <input type="text" id="product_code" name="product_code" class="form-input" value="{{ user.product_code or '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="tracking_number" class="form-label">송장번호</label>
+                    <input type="text" id="tracking_number" name="tracking_number" class="form-input" value="{{ user.tracking_number or '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="product_name" class="form-label">상품명</label>
+                    <input type="text" id="product_name" name="product_name" class="form-input" value="{{ user.product_name or '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="quantity" class="form-label">작업수량</label>
+                    <input type="number" id="quantity" name="quantity" class="form-input" value="{{ user.quantity or '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="box_quantity" class="form-label">박스수량</label>
+                    <input type="number" id="box_quantity" name="box_quantity" class="form-input" value="{{ user.box_quantity or '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="unit_price" class="form-label">금액(단가)</label>
+                    <input type="number" id="unit_price" name="unit_price" class="form-input" step="0.01" value="{{ user.unit_price or '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="total_amount" class="form-label">합계</label>
+                    <input type="number" id="total_amount" name="total_amount" class="form-input" value="{{ user.total_amount or '' }}" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="remarks" class="form-label">비고</label>
+                    <input type="text" id="remarks" name="remarks" class="form-input" value="{{ user.remarks or '' }}">
+                </div>
+                 <div class="form-group">
+                    <label class="form-label">현재 첨부파일</label>
+                    <div style="padding: 8px; border: 1px solid #eee; border-radius: 4px; background-color: #f8f9fa;">
+                        {% if user.attachment %}
+                            <a href="{{ url_for('uploaded_file', filename=user.attachment) }}" target="_blank">{{ user.attachment }}</a>
+                        {% else %}
+                            없음
+                        {% endif %}
+                        <small style="display: block; color: #6c757d;">(파일 변경/삭제는 지원되지 않습니다. 필요 시 항목을 삭제 후 재등록하세요.)</small>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group" style="margin-top: 15px;">
+                <label for="content" class="form-label">내용</label>
+                <textarea id="content" name="content" class="form-textarea">{{ user.content or '' }}</textarea>
+            </div>
+            <div style="margin-top: 20px;">
+                <input type="submit" value="수정 완료" class="submit-btn">
+                <a href="{{ url_for('index', month=user.work_date[:7]) }}" class="cancel-btn">취소</a>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        // index.html과 동일한 스크립트 로직을 사용하되, 수정 페이지에 맞게 일부 조정
+        document.addEventListener('DOMContentLoaded', function() {
+            const quantityInput = document.getElementById('quantity');
+            const unitPriceInput = document.getElementById('unit_price');
+            const totalAmountInput = document.getElementById('total_amount');
+
+            function calculateTotal() {
+                const quantity = parseFloat(quantityInput.value) || 0;
+                const unitPrice = parseFloat(unitPriceInput.value) || 0;
+                totalAmountInput.value = (quantity * unitPrice).toFixed(2);
+            }
+
+            quantityInput.addEventListener('input', calculateTotal);
+            unitPriceInput.addEventListener('input', calculateTotal);
+        });
+    </script>
 </body>
 </html>
