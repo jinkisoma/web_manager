@@ -1,6 +1,7 @@
 import os
 import sqlite3
 import psycopg2
+from psycopg2.extras import DictCursor
 from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory, Response, jsonify
 import pandas as pd
 import io
@@ -30,7 +31,8 @@ CLIENT_WORK_DATA = {
 def get_db_connection():
     """데이터베이스 연결을 가져오는 함수"""
     if DATABASE_URL:
-        conn = psycopg2.connect(DATABASE_URL)
+        # 서버 환경(PostgreSQL)에서 컬럼 이름으로 접근 가능하도록 DictCursor 사용
+        conn = psycopg2.connect(DATABASE_URL, cursor_factory=DictCursor)
     else:
         conn = sqlite3.connect('data.db')
         conn.row_factory = sqlite3.Row
@@ -39,9 +41,6 @@ def get_db_connection():
 def init_db():
     """데이터베이스 테이블을 초기화하는 함수"""
     if not os.path.exists(ATTACHMENT_DIR):
-        os.makedirs(ATTACHMENT_DIR)
-    
-    if not DATABASE_URL:
         conn = get_db_connection()
         # work_date 필드 타입을 DATE로 변경하여 DB 호환성 및 성능 향상
         conn.execute('''
@@ -65,6 +64,9 @@ def init_db():
         ''')
         conn.commit()
         conn.close()
+    
+    if not os.path.exists(ATTACHMENT_DIR):
+        os.makedirs(ATTACHMENT_DIR)
 
 @app.route('/')
 def index():
@@ -328,6 +330,8 @@ def uploaded_file(filename):
     """첨부파일 다운로드"""
     return send_from_directory(ATTACHMENT_DIR, filename)
 
+# 애플리케이션 시작 시 DB 및 디렉토리 초기화
+init_db()
+
 if __name__ == '__main__':
-    # init_db() # DB를 처음 생성할 때만 주석을 풀고 실행하세요.
     app.run(debug=True)
