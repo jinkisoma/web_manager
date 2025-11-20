@@ -1,191 +1,305 @@
-<meta charset="UTF-8">
-<title>데이터 관리 프로그램</title>
+<!DOCTYPE html>
+<html lang="ko">
 <head>
-<style>
-        body { 
-            font-family: sans-serif; 
-            margin: 2em; 
-            background-color: #f9f9f9; 
-        }
-        h1, h2 { 
-            color: #333; 
-        }
-        table { 
-            width: 100%; 
-            border-collapse: collapse; 
-            background-color: white; 
-        }
-        th, td { 
-            border: 1px solid #ddd; 
-            padding: 12px; 
-            text-align: left; 
-        }
-        th { 
-            background-color: #f2f2f2; 
-        }
-        .form-section, .search-section, .data-section { 
-            margin-bottom: 2em; 
-            padding: 20px;
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .flash { 
-            padding: 1em; 
-            margin-bottom: 1em; 
-            border-radius: 5px; 
-        }
-        .flash.success { 
-            background-color: #d4edda; 
-            color: #155724; 
-        }
-        .flash.error { 
-            background-color: #f8d7da; 
-            color: #721c24; 
-        }
-        /* 폼 디자인 개선 CSS */
-        .form-group {
-            margin-bottom: 15px;
-        }
-        .form-label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-        .form-input {
-            width: 98%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
-        .submit-btn {
-            background-color: #007bff;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        .submit-btn:hover {
-            background-color: #0056b3;
-        }
-
-        /* 엑셀 다운로드 버튼 CSS */
-        .excel-btn {
-            display: inline-block;
-            background-color: #28a745;
-            color: white;
-            padding: 5px 10px;
-            text-decoration: none;
-            border-radius: 4px;
-            font-size: 14px;
-            vertical-align: middle;
-            margin-left: 10px;
-        }
-        .excel-btn:hover {
-            background-color: #218838;
-        }
-</style>
+    <meta charset="UTF-8">
+    <title>정산노트</title>
+    <style>
+        body { font-family: sans-serif; margin: 2em; background-color: #f9f9f9; }
+        h1, h2 { color: #333; }
+        table { width: 100%; border-collapse: collapse; background-color: white; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 14px; }
+        th { background-color: #f2f2f2; }
+        .form-section, .search-section, .data-section { margin-bottom: 2em; padding: 20px; background-color: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .flash { padding: 1em; margin-bottom: 1em; border-radius: 5px; }
+        .flash.success { background-color: #d4edda; color: #155724; }
+        .flash.error { background-color: #f8d7da; color: #721c24; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; }
+        .form-group { display: flex; flex-direction: column; }
+        .form-label { margin-bottom: 5px; font-weight: bold; }
+        .form-input, .form-select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        .submit-btn { background-color: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; margin-top: 10px; }
+        .submit-btn:hover { background-color: #0056b3; }
+        .hidden { display: none; }
+        /* 5. 팝업(모달) 스타일 */
+        .modal { display: none; position: fixed; z-index: 1; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4); }
+        .modal-content { background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 600px; border-radius: 8px; }
+        .close-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; }
+        .close-btn:hover, .close-btn:focus { color: black; text-decoration: none; cursor: pointer; }
+        #work-item-table tr:hover { background-color: #f1f1f1; cursor: pointer; }
+    </style>
 </head>
 <body>
-<h1>데이터 관리 프로그램v1</h1>
+    <h1>정산노트 <small style="font-size: 0.5em; color: #666;">2025-11-20[v1]</small></h1>
 
-<!-- Flash 메시지 표시 -->
-{% with messages = get_flashed_messages(with_categories=true) %}
-{% if messages %}
-    {% for category, message in messages %}
-    <div class="flash {{ category }}">{{ message }}</div>
-    {% endfor %}
-{% endif %}
-{% endwith %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+        <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+    {% endwith %}
 
-    <!-- 입력 폼 (디자인 개선 버전) -->
     <div class="form-section">
         <h2>새 데이터 추가</h2>
         <form action="{{ url_for('add_user') }}" method="post" enctype="multipart/form-data">
-            <div class="form-group">
-                <label for="name" class="form-label">이름</label>
-                <input type="text" id="name" name="name" class="form-input" required>
-            </div>
-            <div class="form-group">
-                <label for="phone" class="form-label">연락처</label>
-                <input type="text" id="phone" name="phone" class="form-input">
-            </div>
-            <div class="form-group">
-                <label for="email" class="form-label">이메일</label>
-                <input type="email" id="email" name="email" class="form-input">
-            </div>
-            <div class="form-group">
-                <label for="memo" class="form-label">메모</label>
-                <input type="text" id="memo" name="memo" class="form-input">
-            </div>
-            <div class="form-group">
-                <label for="attachment" class="form-label">첨부파일</label>
-                <input type="file" id="attachment" name="attachment">
+            <div class="form-grid">
+                <!-- 1. 날짜 선택 -->
+                <div class="form-group">
+                    <label for="work_date" class="form-label">작업일자</label>
+                    <input type="date" id="work_date" name="work_date" class="form-input" value="{{ today_date }}" required>
+                </div>
+                <!-- 1. 거래처 선택 -->
+                <div class="form-group">
+                    <label for="client_select" class="form-label">거래처</label>
+                    <select id="client_select" name="client_select" class="form-select" required>
+                        <option value="">선택하세요</option>
+                        {% for client in clients %}
+                        <option value="{{ client }}">{{ client }}</option>
+                        {% endfor %}
+                        <option value="direct">직접 입력</option>
+                    </select>
+                    <input type="text" id="client_direct" name="client_direct" class="form-input hidden" placeholder="거래처 직접 입력">
+                </div>
+                <!-- 4. 작업 구분 -->
+                <div class="form-group">
+                    <label for="work_type_select" class="form-label">작업 구분</label>
+                    <select id="work_type_select" name="work_type_select" class="form-select" disabled>
+                        <option value="">거래처를 먼저 선택하세요</option>
+                    </select>
+                    <input type="text" id="work_type_direct" name="work_type_direct" class="form-input hidden" placeholder="작업 구분 직접 입력">
+                </div>
+                <!-- 3. 작성자 -->
+                <div class="form-group">
+                    <label for="author" class="form-label">작성자</label>
+                    <input type="text" id="author" name="author" class="form-input">
+                </div>
+                <!-- 3. 업체상품코드 -->
+                <div class="form-group">
+                    <label for="product_code" class="form-label">업체상품코드</label>
+                    <input type="text" id="product_code" name="product_code" class="form-input">
+                </div>
+                <!-- 3. 상품명 -->
+                <div class="form-group">
+                    <label for="product_name" class="form-label">상품명</label>
+                    <input type="text" id="product_name" name="product_name" class="form-input">
+                </div>
+                <!-- 3. 내용 -->
+                <div class="form-group">
+                    <label for="content" class="form-label">내용</label>
+                    <input type="text" id="content" name="content" class="form-input">
+                </div>
+                <!-- 3. 작업수량 -->
+                <div class="form-group">
+                    <label for="quantity" class="form-label">작업수량</label>
+                    <input type="number" id="quantity" name="quantity" class="form-input">
+                </div>
+                <!-- 3. 박스수량 -->
+                <div class="form-group">
+                    <label for="box_quantity" class="form-label">박스수량</label>
+                    <input type="number" id="box_quantity" name="box_quantity" class="form-input">
+                </div>
+                <!-- 3. 금액(단가) -->
+                <div class="form-group">
+                    <label for="unit_price" class="form-label">금액(단가)</label>
+                    <input type="number" id="unit_price" name="unit_price" class="form-input" step="0.01">
+                </div>
+                <!-- 3. 합계 -->
+                <div class="form-group">
+                    <label for="total_amount" class="form-label">합계</label>
+                    <input type="number" id="total_amount" name="total_amount" class="form-input" readonly>
+                </div>
+                <!-- 3. 비고 -->
+                <div class="form-group">
+                    <label for="remarks" class="form-label">비고</label>
+                    <input type="text" id="remarks" name="remarks" class="form-input">
+                </div>
+                <!-- 3. 첨부파일 -->
+                <div class="form-group">
+                    <label for="attachment" class="form-label">첨부파일</label>
+                    <input type="file" id="attachment" name="attachment">
+                </div>
             </div>
             <input type="submit" value="저장하기" class="submit-btn">
         </form>
     </div>
 
-    <!-- 검색 폼 (기능 추가 버전) -->
-<div class="search-section">
-        <h2>데이터 검색</h2>
-<form action="{{ url_for('index') }}" method="get">
-            <input type="text" name="keyword" placeholder="이름, 연락처 등으로 검색" value="{{ keyword or '' }}" class="form-input" style="width: 50%; display: inline-block;">
-            <input type="submit" value="검색" class="submit-btn" style="padding: 10px 15px; font-size: 14px;">
-            
-            <!-- '전체 보기' 버튼의 링크 수정 -->
-            <a href="{{ url_for('index', show_all='true') }}" class="submit-btn" style="background-color: #6c757d; padding: 10px 15px; font-size: 14px; text-decoration: none;">전체 보기</a>
-            
-            <!-- '엑셀 다운로드' 버튼 추가 -->
-            <a href="{{ url_for('download_excel', keyword=keyword) }}" class="excel-btn" style="padding: 10px 15px; font-size: 14px;">엑셀 다운로드</a>
-</form>
-</div>
+    <!-- 5. 작업 구분 선택 시 나타날 팝업(모달) -->
+    <div id="work-item-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2>작업 상세 내용</h2>
+            <p>항목을 더블클릭하면 자동으로 입력됩니다.</p>
+            <table id="work-item-table">
+                <thead>
+                    <tr>
+                        <th>거래처</th>
+                        <th>작업구분</th>
+                        <th>내용</th>
+                        <th>단가</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- 내용은 JavaScript로 채워집니다. -->
+                </tbody>
+            </table>
+        </div>
+    </div>
 
-<!-- 데이터 목록 -->
-<div class="data-section">
-<h2>저장된 데이터 목록</h2>
-<table>
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>이름</th>
-                    <th>연락처</th>
-                    <th>이메일</th>
-                    <th>메모</th>
-                    <th>첨부파일</th>
-                    <th>관리</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for user in users %}
-                <tr>
-                    <td>{{ user.id }}</td>
-                    <td>{{ user.name }}</td>
-                    <td>{{ user.phone }}</td>
-                    <td>{{ user.email }}</td>
-                    <td>{{ user.memo }}</td>
-                    <td>
-                        {% if user.attachment %}
-                        <a href="{{ url_for('uploaded_file', filename=user.attachment) }}" target="_blank">{{ user.attachment }}</a>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <a href="{{ url_for('edit_form', id=user.id) }}">수정</a> |
-                        <a href="{{ url_for('delete_user', id=user.id) }}" onclick="return confirm('정말 삭제하시겠습니까?');">삭제</a>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-</table>
-        <!-- 데이터가 없을 때 메시지 표시 -->
-        {% if not users and (request.args.get('show_all') or request.args.get('keyword')) %}
-            <p style="text-align: center; padding: 20px;">표시할 데이터가 없습니다.</p>
-        {% elif not users %}
-            <p style="text-align: center; padding: 20px;">'전체 보기'를 누르거나 검색어를 입력하여 데이터를 조회하세요.</p>
-        {% endif %}
-</div>
+    <!-- 데이터 목록 (기존 구조 유지, 표시할 필드는 추후 조정 필요) -->
+    <div class="data-section">
+        <h2>저장된 데이터 목록</h2>
+        <div style="overflow-x:auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>작업일자</th>
+                        <th>거래처</th>
+                        <th>작성자</th>
+                        <th>상품명</th>
+                        <th>내용</th>
+                        <th>수량</th>
+                        <th>단가</th>
+                        <th>합계</th>
+                        <th>첨부파일</th>
+                        <th>관리</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>{{ user.id }}</td>
+                        <td>{{ user.work_date }}</td>
+                        <td>{{ user.client }}</td>
+                        <td>{{ user.author }}</td>
+                        <td>{{ user.product_name }}</td>
+                        <td>{{ user.content }}</td>
+                        <td>{{ user.quantity }}</td>
+                        <td>{{ user.unit_price }}</td>
+                        <td>{{ user.total_amount }}</td>
+                        <td>
+                            {% if user.attachment %}
+                            <a href="{{ url_for('uploaded_file', filename=user.attachment) }}" target="_blank">보기</a>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="#">수정</a> | <a href="#" onclick="return confirm('정말 삭제하시겠습니까?');">삭제</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const clientSelect = document.getElementById('client_select');
+            const clientDirect = document.getElementById('client_direct');
+            const workTypeSelect = document.getElementById('work_type_select');
+            const workTypeDirect = document.getElementById('work_type_direct');
+            const quantityInput = document.getElementById('quantity');
+            const unitPriceInput = document.getElementById('unit_price');
+            const totalAmountInput = document.getElementById('total_amount');
+            
+            // 5. 모달 관련 요소
+            const modal = document.getElementById('work-item-modal');
+            const modalCloseBtn = document.querySelector('.close-btn');
+            const modalTableBody = document.querySelector('#work-item-table tbody');
+
+            // 6. '직접 입력' 처리
+            clientSelect.addEventListener('change', function() {
+                if (this.value === 'direct') {
+                    clientDirect.classList.remove('hidden');
+                    workTypeSelect.disabled = true;
+                    workTypeSelect.innerHTML = '<option value="">거래처를 먼저 선택하세요</option>';
+                } else {
+                    clientDirect.classList.add('hidden');
+                    clientDirect.value = '';
+                    fetchWorkTypes(this.value);
+                }
+            });
+
+            workTypeSelect.addEventListener('change', function() {
+                if (this.value === 'direct') {
+                    workTypeDirect.classList.remove('hidden');
+                } else {
+                    workTypeDirect.classList.add('hidden');
+                    workTypeDirect.value = '';
+                    if (this.value) {
+                        showWorkItemModal(clientSelect.value);
+                    }
+                }
+            });
+
+            // 4. 거래처 선택 시 작업 구분 목록 불러오기
+            function fetchWorkTypes(clientName) {
+                workTypeSelect.disabled = true;
+                workTypeSelect.innerHTML = '<option>불러오는 중...</option>';
+                if (!clientName) {
+                    workTypeSelect.innerHTML = '<option value="">거래처를 먼저 선택하세요</option>';
+                    return;
+                }
+
+                fetch(`/api/work-items/${clientName}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        workTypeSelect.innerHTML = '<option value="">선택하세요</option>';
+                        for (const workType in data) {
+                            workTypeSelect.add(new Option(workType, workType));
+                        }
+                        workTypeSelect.add(new Option('직접 입력', 'direct'));
+                        workTypeSelect.disabled = false;
+                    });
+            }
+
+            // 5. 작업 구분 선택 시 모달 표시
+            function showWorkItemModal(clientName) {
+                fetch(`/api/work-items/${clientName}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        modalTableBody.innerHTML = ''; // 기존 내용 초기화
+                        for (const workType in data) {
+                            const item = data[workType];
+                            const row = modalTableBody.insertRow();
+                            row.innerHTML = `
+                                <td>${clientName}</td>
+                                <td>${workType}</td>
+                                <td>${item.content}</td>
+                                <td>${item.price}</td>
+                            `;
+                            // 더블클릭 이벤트 추가
+                            row.addEventListener('dblclick', function() {
+                                document.getElementById('content').value = item.content;
+                                document.getElementById('unit_price').value = item.price;
+                                calculateTotal();
+                                modal.style.display = 'none';
+                            });
+                        }
+                        modal.style.display = 'block';
+                    });
+            }
+
+            // 모달 닫기
+            modalCloseBtn.onclick = () => modal.style.display = 'none';
+            window.onclick = (event) => {
+                if (event.target == modal) {
+                    modal.style.display = 'none';
+                }
+            };
+
+            // 7. 합계 자동 계산
+            function calculateTotal() {
+                const quantity = parseFloat(quantityInput.value) || 0;
+                const unitPrice = parseFloat(unitPriceInput.value) || 0;
+                totalAmountInput.value = (quantity * unitPrice).toFixed(2);
+            }
+
+            quantityInput.addEventListener('input', calculateTotal);
+            unitPriceInput.addEventListener('input', calculateTotal);
+        });
+    </script>
 </body>
 </html>
 
+        
