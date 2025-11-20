@@ -34,39 +34,9 @@
 <body>
     <h1>정산노트 <small style="font-size: 0.5em; color: #666;">2025-11-20[v1]</small></h1>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-        {% for category, message in messages %}
-        <div class="flash {{ category }}">{{ message }}</div>
-        {% endfor %}
-    {% endif %}
-    {% endwith %}
-
-    <div class="search-section">
-        <h2>데이터 조회</h2>
-        <form action="{{ url_for('index') }}" method="get">
-            <div class="search-controls">
-                <div class="form-group">
-                    <label for="month" class="form-label">조회 연월</label>
-                    <input type="month" id="month" name="month" value="{{ current_month }}" class="form-input">
-                </div>
-                <div class="form-group">
-                    <label for="keyword" class="form-label">키워드 검색</label>
-                    <input type="text" id="keyword" name="keyword" placeholder="거래처, 작성자, 상품명 등" value="{{ keyword or '' }}" class="form-input">
-                </div>
-                <div class="form-group" style="margin-top: auto;">
-                    <button type="submit" class="action-btn" style="font-size: 14px; padding: 10px 15px;">월별/키워드 조회</button>
-                </div>
-                <div class="form-group" style="margin-top: auto;">
-                    <a href="{{ url_for('download_excel', month=current_month, keyword=keyword) }}" class="action-btn excel-btn" style="font-size: 14px; padding: 10px 15px;">엑셀 다운로드</a>
-                </div>
-            </div>
-        </form>
-    </div>
-
     <div class="form-section">
         <h2>새 데이터 추가</h2>
-        <form action="{{ url_for('add_user') }}" method="post" enctype="multipart/form-data">
+        <form id="add-user-form" action="{{ url_for('add_user') }}" method="post" enctype="multipart/form-data">
             <div class="form-grid">
                 <div class="form-group">
                     <label for="work_date" class="form-label">작업일자</label>
@@ -92,7 +62,7 @@
                 </div>
                 <div class="form-group">
                     <label for="author" class="form-label">작성자</label>
-                    <input type="text" id="author" name="author" class="form-input">
+                    <input type="text" id="author" name="author" class="form-input" required>
                 </div>
                 <div class="form-group">
                     <label for="product_code" class="form-label">업체상품코드</label>
@@ -116,11 +86,11 @@
                 </div>
                 <div class="form-group">
                     <label for="unit_price" class="form-label">금액(단가)</label>
-                    <input type="number" id="unit_price" name="unit_price" class="form-input" step="0.01">
+                    <input type="number" id="unit_price" name="unit_price" class="form-input">
                 </div>
                 <div class="form-group">
                     <label for="total_amount" class="form-label">합계</label>
-                    <input type="number" id="total_amount" name="total_amount" class="form-input" readonly>
+                    <input type="text" id="total_amount" name="total_amount" class="form-input" readonly style="text-align: right;">
                 </div>
                 <div class="form-group">
                     <label for="remarks" class="form-label">비고</label>
@@ -135,7 +105,10 @@
                 <label for="content" class="form-label">내용</label>
                 <textarea id="content" name="content" class="form-textarea"></textarea>
             </div>
-            <input type="submit" value="저장하기" class="submit-btn" style="margin-top: 20px;">
+            <div style="margin-top: 20px; display: flex; gap: 10px;">
+                <input type="submit" value="저장하기" class="submit-btn">
+                <button type="button" id="reset-form-btn" class="action-btn" style="background-color: #6c757d;">입력 초기화</button>
+            </div>
         </form>
     </div>
 
@@ -158,47 +131,131 @@
         </div>
     </div>
 
+    <div class="search-section">
+        <h2>데이터 조회</h2>
+        <form action="{{ url_for('index') }}" method="get">
+            <div class="search-controls">
+                <div class="form-group">
+                    <label for="start_date" class="form-label">시작일</label>
+                    <input type="date" id="start_date" name="start_date" value="{{ start_date or '' }}" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label for="end_date" class="form-label">종료일</label>
+                    <input type="date" id="end_date" name="end_date" value="{{ end_date or '' }}" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label for="keyword" class="form-label">키워드 검색</label>
+                    <input type="text" id="keyword" name="keyword" placeholder="거래처, 작성자, 상품명 등" value="{{ keyword or '' }}" class="form-input">
+                </div>
+                <div class="form-group" style="margin-top: auto;">
+                    <button type="submit" class="action-btn" style="font-size: 14px; padding: 10px 15px;">기간/키워드 조회</button>
+                </div>
+                <div class="form-group" style="margin-top: auto;">
+                    <a href="{{ url_for('download_excel', start_date=start_date, end_date=end_date, keyword=keyword) }}" class="action-btn excel-btn" style="font-size: 14px; padding: 10px 15px;">엑셀 다운로드</a>
+                </div>
+            </div>
+        </form>
+    </div>
+
     <div class="data-section">
-        <h2>저장된 데이터 목록 ({{ current_month }})</h2>
+        <h2>
+            저장된 데이터 목록 
+            {% if start_date and end_date %}
+            <small style="font-size: 0.8em; color: #666;">({{ start_date }} ~ {{ end_date }})</small>
+            {% endif %}
+        </h2>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            <div class="flash {{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+        {% endwith %}
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+            <div>
+                <form id="confirm-all-form" action="{{ url_for('confirm_all') }}" method="post" onsubmit="return confirm('조회된 모든 미확정 내역 중, 본인이 작성한 내역만 확정 처리됩니다. 진행하시겠습니까?');">
+                    {% for user in users %}{% if not user.confirmed %}
+                    <input type="hidden" name="confirm_ids" value="{{ user.id }}">
+                    {% endif %}{% endfor %}
+                    <input type="hidden" name="current_author" id="confirm-all-author">
+                    <button type="submit" class="action-btn" style="background-color: #17a2b8;">조회 내역 전체 확정</button>
+                </form>
+            </div>
+            <div style="font-size: 14px; font-weight: bold; color: #333;">
+                <span>총 {{ total_count }}건</span> |
+                <span style="color: #dc3545;">미확정: {{ unconfirmed_count }}건</span> |
+                <span style="color: green;">확정: {{ confirmed_count }}건</span>
+            </div>
+        </div>
         <div style="overflow-x:auto;">
             <table>
                 <thead>
                     <tr>
-                        <th>ID</th>
+                        <th>고유번호</th>
                         <th>작업일자</th>
                         <th>거래처</th>
+                        <th>작업 구분</th>
                         <th>작성자</th>
+                        <th>업체상품코드</th>
                         <th>상품명</th>
                         <th>송장번호</th>
                         <th>내용</th>
                         <th>수량</th>
+                        <th>박스수량</th>
                         <th>단가</th>
                         <th>합계</th>
+                        <th>비고</th>
+                        <th>확정 상태</th>
                         <th>첨부파일</th>
                         <th>관리</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for user in users %}
+                    {% for user in users %} {# 이 부분은 서버에서 렌더링됩니다 #}
                     <tr>
                         <td>{{ user.id }}</td>
                         <td>{{ user.work_date }}</td>
                         <td>{{ user.client }}</td>
+                        <td>{{ user.work_type }}</td>
                         <td>{{ user.author }}</td>
+                        <td>{{ user.product_code }}</td>
                         <td>{{ user.product_name }}</td>
                         <td>{{ user.tracking_number }}</td>
                         <td>{{ user.content }}</td>
-                        <td>{{ user.quantity }}</td>
-                        <td>{{ user.unit_price }}</td>
-                        <td>{{ user.total_amount }}</td>
+                        <td>{{ user.quantity | number_format }}</td>
+                        <td>{{ user.box_quantity | number_format }}</td>
+                        <td>{{ user.unit_price | number_format }}</td>
+                        <td>{{ user.total_amount | number_format }}</td>
+                        <td>{{ user.remarks }}</td>
+                        <td>
+                            {% if user.confirmed %}
+                                <span style="color: green; font-weight: bold;">확정</span>
+                            {% else %}
+                                <span style="color: #dc3545;">미확정</span>
+                            {% endif %}
+                        </td>
                         <td>
                             {% if user.attachment %}
                             <a href="{{ url_for('uploaded_file', filename=user.attachment) }}" target="_blank">보기</a>
                             {% endif %}
                         </td>
-                        <td>
-                            <a href="{{ url_for('edit_form', id=user.id) }}">수정</a> | 
-                            <a href="{{ url_for('delete_user', id=user.id) }}" onclick="return confirm('정말 삭제하시겠습니까?');">삭제</a>
+                        <td class="management-cell" data-author="{{ user.author }}">
+                            {# JavaScript가 이 부분을 제어합니다 #}
+                            {% if user.confirmed %}
+                                <form class="unconfirm-form" action="{{ url_for('unconfirm_user', id=user.id) }}" method="post" style="display: inline;">
+                                    <input type="hidden" name="current_author" class="current-author-input">
+                                    <button type="submit" class="unconfirm-btn" style="background: none; border: none; color: #007bff; cursor: pointer; padding: 0; text-decoration: underline;">확정 취소</button>
+                                </form>
+                            {% else %}
+                                <a class="edit-link" href="{{ url_for('edit_form', id=user.id) }}">수정</a> | 
+                                <a class="delete-link" href="{{ url_for('delete_user', id=user.id) }}" onclick="return confirm('정말 삭제하시겠습니까?');">삭제</a> |
+                                <form action="{{ url_for('confirm_user', id=user.id) }}" method="post" style="display: inline;">
+                                    <input type="hidden" name="current_author" class="current-author-input">
+                                    <button type="submit" style="background: none; border: none; color: #28a745; cursor: pointer; padding: 0; text-decoration: underline;">확정</button>
+                                </form>
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}
@@ -216,6 +273,7 @@
             const quantityInput = document.getElementById('quantity');
             const unitPriceInput = document.getElementById('unit_price');
             const totalAmountInput = document.getElementById('total_amount');
+            const authorInput = document.getElementById('author');
             
             const modal = document.getElementById('work-item-modal');
             const modalCloseBtn = document.querySelector('.close-btn');
@@ -300,12 +358,97 @@
             function calculateTotal() {
                 const quantity = parseFloat(quantityInput.value) || 0;
                 const unitPrice = parseFloat(unitPriceInput.value) || 0;
-                totalAmountInput.value = (quantity * unitPrice).toFixed(2);
+                const total = Math.floor(quantity * unitPrice);
+                totalAmountInput.value = total.toLocaleString('en-US');
             }
 
             quantityInput.addEventListener('input', calculateTotal);
             unitPriceInput.addEventListener('input', calculateTotal);
+
+            // [추가] 작성자 이름 유지 기능
+            // 페이지 로드 시, localStorage에서 저장된 작성자 이름 불러오기
+            const savedAuthor = localStorage.getItem('savedAuthor');
+            if (savedAuthor) {
+                authorInput.value = savedAuthor;
+            }
+
+            // 작성자 입력 필드에 변경이 있을 때마다 localStorage에 저장
+            authorInput.addEventListener('input', function() {
+                localStorage.setItem('savedAuthor', this.value);
+            });
+
+            // [추가] 입력 초기화 버튼 기능
+            const resetBtn = document.getElementById('reset-form-btn');
+            const addForm = document.getElementById('add-user-form');
+
+            resetBtn.addEventListener('click', function() {
+                // 현재 작성자 값을 임시 저장
+                const currentAuthor = authorInput.value;
+
+                // 폼의 모든 요소 초기화
+                addForm.reset();
+
+                // 작성자 필드 값 복원
+                authorInput.value = currentAuthor;
+
+                // 합계 필드 초기화
+                totalAmountInput.value = "0";
+
+                // 작업일자를 오늘 날짜로 재설정
+                document.getElementById('work_date').value = "{{ today_date }}";
+
+                // 동적으로 변경된 select, hidden input 등 초기화
+                clientDirect.classList.add('hidden');
+                workTypeSelect.innerHTML = '<option value="">거래처를 먼저 선택하세요</option>';
+                workTypeSelect.disabled = true;
+                workTypeDirect.classList.add('hidden');
+            });
+
+            // [추가] 확정 취소 버튼 클릭 시 비밀번호 입력 처리
+            document.querySelectorAll('.unconfirm-form').forEach(form => {
+                form.addEventListener('submit', function(event) {
+                    event.preventDefault();
+                    const password = prompt('확정을 취소하려면 비밀번호를 입력하세요:');
+                    if (password) { // 사용자가 취소하지 않고 무언가 입력했을 때
+                        const passwordInput = document.createElement('input');
+                        passwordInput.type = 'hidden';
+                        passwordInput.name = 'password';
+                        passwordInput.value = password;
+                        this.appendChild(passwordInput);
+                        this.submit();
+                    } else if (password === "") { // 빈 문자열을 입력했을 때
+                        alert("비밀번호를 입력해야 합니다.");
+                    }
+                    // 사용자가 '취소'를 누르면 (password === null) 아무것도 하지 않음
+                });
+            });
+
+            // [추가] 소유권 확인 및 UI 제어
+            const currentAuthor = localStorage.getItem('savedAuthor') || '';
+            document.querySelectorAll('.management-cell').forEach(cell => {
+                const recordAuthor = cell.getAttribute('data-author');
+                if (currentAuthor && recordAuthor === currentAuthor) {
+                    // 본인 데이터: 아무것도 하지 않음 (모든 버튼 표시)
+                } else {
+                    // 타인 데이터: 모든 관리 버튼 숨김
+                    cell.innerHTML = '<span style="color: #6c757d;">-</span>';
+                }
+            });
+
+            // 소유권 확인을 위해 현재 작성자 이름을 각 폼에 주입
+            document.querySelectorAll('.current-author-input').forEach(input => {
+                input.value = currentAuthor;
+            });
+            document.getElementById('confirm-all-author').value = currentAuthor;
+
+            // 수정/삭제 링크에 현재 작성자 정보 추가
+            document.querySelectorAll('a.edit-link').forEach(link => {
+                link.href += `?current_author=${encodeURIComponent(currentAuthor)}`;
+            });
+            document.querySelectorAll('a.delete-link').forEach(link => {
+                link.href += `?current_author=${encodeURIComponent(currentAuthor)}`;
+            });
+
         });
     </script>
 </body>
-</html>
