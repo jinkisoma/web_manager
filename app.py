@@ -40,10 +40,34 @@ def get_db_connection():
 
 def init_db():
     """데이터베이스 테이블을 초기화하는 함수"""
-    if not os.path.exists(ATTACHMENT_DIR):
-        conn = get_db_connection()
-        # work_date 필드 타입을 DATE로 변경하여 DB 호환성 및 성능 향상
-        conn.execute('''
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # DB 종류에 따라 다른 CREATE TABLE 구문 실행
+    if DATABASE_URL: # PostgreSQL
+        # PostgreSQL은 SERIAL 타입을 사용하여 자동 증가 ID를 구현합니다.
+        cursor.execute('''
+           CREATE TABLE IF NOT EXISTS user_data (
+               id SERIAL PRIMARY KEY,
+               work_date DATE NOT NULL,
+               client TEXT NOT NULL,
+               author TEXT,
+               product_code TEXT,
+               tracking_number TEXT,
+               work_type TEXT,
+               content TEXT,
+               product_name TEXT,
+               quantity INTEGER,
+               box_quantity INTEGER,
+               unit_price REAL,
+               total_amount REAL,
+               attachment TEXT,
+               remarks TEXT
+           )
+        ''')
+    else: # SQLite
+        # SQLite는 INTEGER PRIMARY KEY AUTOINCREMENT를 사용합니다.
+        cursor.execute('''
            CREATE TABLE IF NOT EXISTS user_data (
                id INTEGER PRIMARY KEY AUTOINCREMENT,
                work_date DATE NOT NULL,
@@ -62,9 +86,12 @@ def init_db():
                remarks TEXT
            )
         ''')
-        conn.commit()
-        conn.close()
+
+    conn.commit()
+    cursor.close()
+    conn.close()
     
+    # 첨부파일 디렉토리가 없으면 생성
     if not os.path.exists(ATTACHMENT_DIR):
         os.makedirs(ATTACHMENT_DIR)
 
@@ -93,11 +120,12 @@ def index():
 
     if search_keyword:
         search_term = f"%{search_keyword}%"
-        search_condition = f"""(client LIKE {placeholder} OR author LIKE {placeholder} 
-                                OR product_name LIKE {placeholder} OR content LIKE {placeholder}
-                                OR tracking_number LIKE {placeholder})"""
+        # 파라미터 개수 불일치 오류를 해결하기 위해 쿼리 문자열에 직접 값을 포맷팅합니다.
+        # SQL 인젝션 위험이 없도록 search_term은 %와 사용자 입력으로만 구성되어 안전합니다.
+        search_condition = f"""(client LIKE '{search_term}' OR author LIKE '{search_term}' 
+                                OR product_name LIKE '{search_term}' OR content LIKE '{search_term}'
+                                OR tracking_number LIKE '{search_term}')"""
         conditions.append(search_condition)
-        params.extend([search_term] * 5)
 
     if conditions:
         query = f"{base_query} WHERE {' AND '.join(conditions)} ORDER BY id DESC"
