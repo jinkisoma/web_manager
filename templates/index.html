@@ -189,7 +189,7 @@
             <div>
                 <form id="confirm-all-form" action="{{ url_for('confirm_all') }}" method="post" onsubmit="return confirm('조회된 모든 미확정 내역 중, 본인이 작성한 내역만 확정 처리됩니다. 진행하시겠습니까?');">
                     {% for user in users %}{% if not user.confirmed %}
-                    <input type="hidden" name="confirm_ids" value="{{ user.id }}">
+                    <input type="hidden" name="confirm_ids" value="{{ user.id }}"> {# MongoDB의 _id 문자열이 값으로 들어감 #}
                     {% endif %}{% endfor %}
                     <input type="hidden" name="current_author" id="confirm-all-author">
                     <button type="submit" class="action-btn" style="background-color: #17a2b8;">조회 내역 전체 확정</button>
@@ -226,7 +226,7 @@
                 <tbody>
                     {% for user in users %} {# 이 부분은 서버에서 렌더링됩니다 #}
                     <tr>
-                        <td>{{ user.id }}</td>
+                        <td>{{ loop.index }}</td> {# 더 이상 숫자 ID가 아니므로, 리스트 순번을 표시하거나 user.id(긴 문자열)를 표시할 수 있습니다. #}
                         <td>{{ user.work_date }}</td>
                         <td>{{ user.client }}</td>
                         <td>{{ user.work_type }}</td>
