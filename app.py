@@ -15,7 +15,7 @@ app.secret_key = 'your_very_secret_key' # 실제 운영시에는 더 복잡한 �
 # --- MongoDB 연결 설정 ---
 # Atlas에서 복사한 연결 문자열을 여기에 붙여넣으세요. <username>, <password>를 실제 정보로 수정해야 합니다.
 MONGO_URI = os.environ.get('DATABASE_URL', "mongodb+srv://jinkikim0629_db_user:i5n9VjN6sngz2pc6@cluster0.jzo4itl.mongodb.net/?appName=Cluster0")
-client = MongoClient(MONGO_URI, tlsCAFile=certifi.where())
+client = MongoClient(MONGO_URI, tlsCAFile=certifi.where(), tlsDisableOCSPStapling=True)
 db = client.settlement_note # 데이터베이스 이름 설정 (없으면 자동 생성)
 users_collection = db.user_data # 컬렉션(테이블과 유사) 이름 설정
 
